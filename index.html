@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sanmu Portfolio</title>
+    <!-- 引入外部样式表 -->
+    <link rel="stylesheet" href="./src/style.css">
+    <!-- 引入 jQuery（CDN），先于 Paper.js 加载，便于后续脚本统一使用 -->
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+    <!-- 引入 Paper.js（CDN） -->
+    <script src="https://cdn.jsdelivr.net/npm/paper@0.12.18/dist/paper-full.min.js"></script>
+</head>
+<body>
+    <!-- Paper.js 画布，resize 属性会让画布自动适配窗口尺寸 -->
+    <canvas id="myCanvas" resize></canvas>
+
+    <!-- 业务脚本，使用 type="module" 便于后续模块化 -->
+    <script type="module" src="./src/main.js"></script>
+</body>
+</html>
