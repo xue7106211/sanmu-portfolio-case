@@ -1,9 +1,25 @@
+/* 全局重置：让 html 与 body 占满整个视口，并清除浏览器默认外边距 */
 html, body {
+    /* 清除默认外边距，避免页面四周出现白边 */
     margin: 0;
+    /* 清除默认内边距 */
     padding: 0;
+    /* 宽度撑满父容器（视口） */
     width: 100%;
+    /* 高度撑满父容器（视口），便于 canvas 等子元素以百分比铺满 */
     height: 100%;
-    overflow: hidden;
+    /* 允许内容垂直滚动，水平方向仍隐藏多余内容 */
+    overflow-x: hidden;
+    overflow-y: auto;
+    /* 全局字体：优先系统无衬线，贴近设计稿的现代字体观感 */
+    font-family: "Helvetica Neue", Helvetica, Arial, "PingFang SC", sans-serif;
+    color: #111;
+    background: #fff;
+}
+
+/* 隐藏系统默认光标，改用自定义指针 */
+html, body {
+    cursor: none;
 }
 
 canvas[resize]{
@@ -12,4 +28,193 @@ canvas[resize]{
     border: 10px solid rebeccapurple;
     box-sizing: border-box;
     display: block;
+}
+
+.mousePointer {
+    /* 自定义鼠标指针：尺寸与外观 */
+    height: 16px;
+    width: 16px;
+    background: #00ee38;
+    border-radius: 999px;
+
+    /* 固定定位，使用 transform 做位移，性能更好 */
+    position: fixed;
+    top: 0;
+    left: 0;
+    /* 让圆心对齐鼠标坐标 */
+    transform: translate(-50%, -50%);
+
+    /* 不阻挡下层元素的鼠标事件 */
+    pointer-events: none;
+    /* 始终位于最顶层 */
+    z-index: 9999;
+
+    /* 用 will-change 提示浏览器开启 GPU 合成 */
+    will-change: transform;
+}
+
+
+/* -------------------------------------------------------------------------- */
+/* 页面整体容器                                                                */
+/* -------------------------------------------------------------------------- */
+.container {
+    /* 上下加适度内边距，让页面四周有留白 */
+    padding: 32px 40px;
+    box-sizing: border-box;
+}
+
+/* -------------------------------------------------------------------------- */
+/* 顶部信息区（info-header）                                                   */
+/* 结构：                                                                      */
+/*   .info-header                                                              */
+/*     ├─ div : 顶部栏  ── span(Portfolio) + badge(奖章) + switch(开关)         */
+/*     ├─ div : 巨型标题 ── p(Hi —) + span(I'm Sandra...)                       */
+/*     └─ div : 图片区  ── 人物图 + 圆形旋转文字                                  */
+/* -------------------------------------------------------------------------- */
+.info-header {
+    /* 用纵向 flex 让三块内容上下排列 */
+    display: flex;
+    flex-direction: column;
+    /* 区块之间留出节奏感 */
+    gap: 48px;
+}
+
+/* ============ 第 1 行：顶部栏 ============ */
+.info-header > div:nth-child(1) {
+    /* 横向 flex：左侧 Portfolio 文案，右侧 badge + switch */
+    display: flex;
+    align-items: center;
+    /* 让左右两端分散对齐 */
+    justify-content: space-between;
+}
+
+/* 左上角的 "Portfolio" 文案（用 span 承载） */
+.info-header > div:nth-child(1) > span {
+    font-size: 16px;
+    color: #111;
+}
+
+/* 右上角圆形奖章（badge） */
+.info-header > div:nth-child(1) > div:nth-child(2) {
+    /* 单独成圆 */
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    /* 黑底白字，模拟设计稿里的 "OFFICIAL DESIGN AWARDS" 徽章 */
+    background: #111;
+    color: #fff;
+    font-size: 9px;
+    text-align: center;
+    /* 文字默认是块/行内布局，用 flex 居中更稳 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* 与右侧 switch 之间留间距 */
+    margin-left: auto;
+    margin-right: 16px;
+    /* 占位文字斜一点，后续换 SVG */
+    letter-spacing: 0.5px;
+}
+
+/* 右上角 "Switch to old school" 开关（用伪开关 + 文案模拟） */
+.info-header > div:nth-child(1) > div:nth-child(3) {
+    /* 用 flex 把开关图形和文案并排 */
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: #111;
+    line-height: 1.3;
+}
+/* 用 ::before 画一个 pill 形状的开关（黑底白圆点） */
+.info-header > div:nth-child(1) > div:nth-child(3)::before {
+    content: "";
+    width: 36px;
+    height: 18px;
+    border-radius: 999px;
+    background: #111;
+    /* 用径向渐变在右侧画一个白色小圆点，模拟开关滑块 */
+    background-image: radial-gradient(circle at 75% 50%, #fff 5px, transparent 6px);
+}
+
+/* ============ 第 2 行：巨型标题 ============ */
+.info-header > div:nth-child(2) {
+    /* 标题区上下不需要太多间距，让 p 与 span 紧贴 */
+    display: flex;
+    flex-direction: column;
+}
+
+/* "HI —" 这一行 */
+.info-header > div:nth-child(2) > p {
+    /* 还原浏览器默认的段落上下边距 */
+    margin: 0 0 8px 0;
+    font-size: clamp(48px, 7vw, 96px);
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    text-transform: uppercase;
+}
+
+/* "I'M SANDRA, FRONTEND DEVELOPER AND DESIGNER." 这一行 */
+.info-header > div:nth-child(2) > span {
+    /* 让 span 自然换行（默认 inline 也行，这里强制块级，宽度好控制） */
+    display: block;
+    font-size: clamp(48px, 7vw, 96px);
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+    text-transform: uppercase;
+    /* 限制最大宽度，让文字在大屏下也能在指定位置换行 */
+    max-width: 1200px;
+}
+
+/* ============ 第 3 行：人像图 + 圆形旋转文字 ============ */
+.info-header > div:nth-child(3) {
+    /* 让两个子元素水平排列，旋转点用绝对定位摆到图片右上 */
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    margin-top: 24px;
+}
+
+/* "图片" 占位（人像图） */
+.info-header > div:nth-child(3) > div:nth-child(1) {
+    width: clamp(320px, 40vw, 520px);
+    height: clamp(240px, 30vw, 400px);
+    background: #d9d9d9;
+    /* 让内部 img 不溢出，同时也兼容尚未加载的占位状态 */
+    overflow: hidden;
+}
+
+/* 内层 <img> 撑满占位盒子，超出部分按比例裁切 */
+.info-header > div:nth-child(3) > div:nth-child(1) > img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* "旋转点"（圆形文字 GO CHECK OUT MY PROJECTS） */
+.info-header > div:nth-child(3) > div:nth-child(2) {
+    /* 让圆环悬浮在图片右上方区域 */
+    position: absolute;
+    left: clamp(280px, 36vw, 460px);
+    top: -40px;
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    /* 占位用淡灰底；真正的环形文字建议用 SVG <textPath> 实现 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #111;
+    font-size: 11px;
+    /* 持续旋转，营造圆形跑马灯效果 */
+    animation: spin 8s linear infinite;
+}
+
+/* 圆形文字的旋转动画 */
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
 }
