@@ -11,8 +11,8 @@ html, body {
     /* 允许内容垂直滚动，水平方向仍隐藏多余内容 */
     overflow-x: hidden;
     overflow-y: auto;
-    /* 全局字体：优先系统无衬线，贴近设计稿的现代字体观感 */
-    font-family: "Helvetica Neue", Helvetica, Arial, "PingFang SC", sans-serif;
+    /* 全局字体：macOS 优先 Helvetica Neue，其他系统补底 Inter，最后回落通用 sans-serif */
+    font-family: "Helvetica Neue", Inter, sans-serif;
     color: #111;
     background: #fff;
 }
@@ -67,9 +67,9 @@ canvas[resize]{
 /* 顶部信息区（info-header）                                                   */
 /* 结构：                                                                      */
 /*   .info-header                                                              */
-/*     ├─ div : 顶部栏  ── span(Portfolio) + badge(奖章) + switch(开关)         */
-/*     ├─ div : 巨型标题 ── p(Hi —) + span(I'm Sandra...)                       */
-/*     └─ div : 图片区  ── 人物图 + 圆形旋转文字                                  */
+/*     ├─ .top-bar  ── .brand + .badge + .toggle                                */
+/*     ├─ .hero     ── .hero__greeting + .hero__title                           */
+/*     └─ .media    ── .portrait + .circle-text                                 */
 /* -------------------------------------------------------------------------- */
 .info-header {
     /* 用纵向 flex 让三块内容上下排列 */
@@ -80,7 +80,7 @@ canvas[resize]{
 }
 
 /* ============ 第 1 行：顶部栏 ============ */
-.info-header > div:nth-child(1) {
+.top-bar {
     /* 横向 flex：左侧 Portfolio 文案，右侧 badge + switch */
     display: flex;
     align-items: center;
@@ -88,14 +88,14 @@ canvas[resize]{
     justify-content: space-between;
 }
 
-/* 左上角的 "Portfolio" 文案（用 span 承载） */
-.info-header > div:nth-child(1) > span {
+/* 左上角的 "Portfolio" 文案 */
+.brand {
     font-size: 16px;
     color: #111;
 }
 
-/* 右上角圆形奖章（badge） */
-.info-header > div:nth-child(1) > div:nth-child(2) {
+/* 右上角圆形奖章 */
+.badge {
     /* 单独成圆 */
     width: 64px;
     height: 64px;
@@ -116,8 +116,8 @@ canvas[resize]{
     letter-spacing: 0.5px;
 }
 
-/* 右上角 "Switch to old school" 开关（用伪开关 + 文案模拟） */
-.info-header > div:nth-child(1) > div:nth-child(3) {
+/* 右上角 "Switch to old school" 开关（伪开关 + 文案） */
+.toggle {
     /* 用 flex 把开关图形和文案并排 */
     display: flex;
     align-items: center;
@@ -127,7 +127,7 @@ canvas[resize]{
     line-height: 1.3;
 }
 /* 用 ::before 画一个 pill 形状的开关（黑底白圆点） */
-.info-header > div:nth-child(1) > div:nth-child(3)::before {
+.toggle::before {
     content: "";
     width: 36px;
     height: 18px;
@@ -138,14 +138,14 @@ canvas[resize]{
 }
 
 /* ============ 第 2 行：巨型标题 ============ */
-.info-header > div:nth-child(2) {
+.hero {
     /* 标题区上下不需要太多间距，让 p 与 span 紧贴 */
     display: flex;
     flex-direction: column;
 }
 
 /* "HI —" 这一行 */
-.info-header > div:nth-child(2) > p {
+.hero__greeting {
     /* 还原浏览器默认的段落上下边距 */
     margin: 0 0 8px 0;
     font-size: clamp(48px, 7vw, 96px);
@@ -156,7 +156,7 @@ canvas[resize]{
 }
 
 /* "I'M SANDRA, FRONTEND DEVELOPER AND DESIGNER." 这一行 */
-.info-header > div:nth-child(2) > span {
+.hero__title {
     /* 让 span 自然换行（默认 inline 也行，这里强制块级，宽度好控制） */
     display: block;
     font-size: clamp(48px, 7vw, 96px);
@@ -169,7 +169,7 @@ canvas[resize]{
 }
 
 /* ============ 第 3 行：人像图 + 圆形旋转文字 ============ */
-.info-header > div:nth-child(3) {
+.media {
     /* 让两个子元素水平排列，旋转点用绝对定位摆到图片右上 */
     position: relative;
     display: flex;
@@ -178,7 +178,7 @@ canvas[resize]{
 }
 
 /* "图片" 占位（人像图） */
-.info-header > div:nth-child(3) > div:nth-child(1) {
+.portrait {
     width: clamp(320px, 40vw, 520px);
     height: clamp(240px, 30vw, 400px);
     background: #d9d9d9;
@@ -187,7 +187,7 @@ canvas[resize]{
 }
 
 /* 内层 <img> 撑满占位盒子，超出部分按比例裁切 */
-.info-header > div:nth-child(3) > div:nth-child(1) > img {
+.portrait > img {
     width: 100%;
     height: 100%;
     object-fit: cover;
@@ -195,22 +195,22 @@ canvas[resize]{
 }
 
 /* "旋转点"（圆形文字 GO CHECK OUT MY PROJECTS） */
-.info-header > div:nth-child(3) > div:nth-child(2) {
+.circle-text {
     /* 让圆环悬浮在图片右上方区域 */
     position: absolute;
     left: clamp(280px, 36vw, 460px);
     top: -40px;
     width: 120px;
     height: 120px;
-    border-radius: 50%;
-    /* 占位用淡灰底；真正的环形文字建议用 SVG <textPath> 实现 */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #111;
-    font-size: 11px;
-    /* 持续旋转，营造圆形跑马灯效果 */
+    /* 持续旋转，营造圆形跑马灯效果；旋转中心默认就是元素中心 */
     animation: spin 8s linear infinite;
+}
+
+/* 内嵌的 SVG 撑满父容器，作为环形文字的画布 */
+.circle-text > svg {
+    display: block;
+    width: 100%;
+    height: 100%;
 }
 
 /* 圆形文字的旋转动画 */

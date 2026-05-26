@@ -1,9 +1,15 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sanmu Portfolio</title>
+    <!-- 预连接 Google Fonts，提前建立 TLS 通道，加快字体加载 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- 引入 Inter 字体家族，作为 Helvetica Neue 在非 macOS 系统下的补底 -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap">
     <!-- 引入外部样式表 -->
     <link rel="stylesheet" href="./src/style.css">
     <!-- 引入 jQuery（CDN），先于 Paper.js 加载，便于后续脚本统一使用 -->
@@ -11,6 +17,7 @@
     <!-- 引入 Paper.js（CDN） -->
     <script src="https://cdn.jsdelivr.net/npm/paper@0.12.18/dist/paper-full.min.js"></script>
 </head>
+
 <body>
     <!-- Paper.js 画布，resize 属性会让画布自动适配窗口尺寸
     <canvas id="myCanvas" resize></canvas> -->
@@ -20,23 +27,32 @@
 
     <div class="container">
         <div class="info-header">
-            <div>
-                <span>Portfolio</span>
-                <div>OFFICIAL<br>DESIGN<br>AWARDS</div>
-                <div>Switch to<br>old school</div>
+            <div class="top-bar">
+                <span class="brand">Portfolio</span>
+                <div class="badge">OFFICIAL<br>DESIGN<br>AWARDS</div>
+                <div class="toggle">Switch to<br>old school</div>
             </div>
-            <div>
-                <p>Hi —</p>
-                <span>I'm Sandra, frontend developer and designer.</span>
+            <div class="hero">
+                <p class="hero__greeting">Hi —</p>
+                <span class="hero__title">I'm Sandra, frontend developer and designer.</span>
             </div>
-            <div>
-                <div>
-                    <img
-                        src="https://picsum.photos/id/64/1040/800"
-                        alt="Sandra portrait"
-                    >
+            <div class="media">
+                <div class="portrait">
+                    <img src="https://picsum.photos/id/64/1040/800" alt="Sandra portrait">
                 </div>
-                <div>GO CHECK OUT · MY PROJECTS · </div>
+                <div class="circle-text">
+                    <!-- 用 SVG textPath 让文字沿圆形路径排列；定义一个不可见的圆当轨道 -->
+                    <svg viewBox="0 0 120 120" width="120" height="120">
+                        <defs>
+                            <!-- 半径 50，圆心 (60,60)。从 12 点位置(60,10)开始顺时针绕一圈 -->
+                            <path id="circlePath" d="M 60,60 m -50,0 a 50,50 0 1,1 100,0 a 50,50 0 1,1 -100,0" />
+                        </defs>
+                        <text font-size="12" letter-spacing="2" fill="#111">
+                            <textPath href="#circlePath">GO CHECK OUT · MY PROJECTS · GO CHECK OUT · MY PROJECTS ·
+                            </textPath>
+                        </text>
+                    </svg>
+                </div>
             </div>
         </div>
         <div></div>
@@ -47,4 +63,5 @@
     <!-- 业务脚本，使用 type="module" 便于后续模块化 -->
     <script type="module" src="./src/main.js"></script>
 </body>
+
 </html>
