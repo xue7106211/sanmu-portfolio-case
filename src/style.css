@@ -51,6 +51,34 @@ canvas[resize]{
 
     /* 用 will-change 提示浏览器开启 GPU 合成 */
     will-change: transform;
+
+    /* 给宽高/背景/滤镜加过渡，悬停放大时更顺滑；
+       注意：故意不给 transform 加 transition，否则会和 rAF 每帧更新位置打架，造成拖影/卡顿 */
+    transition:
+        width 0.3s ease,
+        height 0.3s ease,
+        background 0.3s ease,
+        backdrop-filter 0.3s ease;
+}
+
+/* 鼠标悬停在 data-bigdot 元素上时，由 JS 给 .mousePointer 加上 .big 类 */
+.mousePointer.big {
+    /* 放大尺寸：从 16px 变到 80px */
+    width: 80px;
+    height: 80px;
+
+    /* 用半透明白色作为底色，配合下面的 mix-blend-mode: difference
+       做出反色效果——白 - 任意颜色 = 该颜色的反相色 */
+    background: rgba(255, 255, 255, 0.85);
+
+    /* 毛玻璃：模糊指针"下方"的页面内容；saturate 让色彩更鲜活
+       -webkit- 前缀兼容部分 Safari 版本 */
+    backdrop-filter: blur(8px) saturate(160%);
+    -webkit-backdrop-filter: blur(8px) saturate(160%);
+
+    /* 与下层内容做反色混合，让指针在任何颜色背景上都有反差，
+       并产生有趣的色彩偏移（比如划过绿色文字时指针会变成红色调） */
+    mix-blend-mode: difference;
 }
 
 

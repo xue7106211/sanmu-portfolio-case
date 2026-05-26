@@ -76,3 +76,22 @@ function tick() {
 }
 
 requestAnimationFrame(tick);
+
+
+/* -------------------------------------------------------------------------- */
+/* 小圆点变大圆点 —— 鼠标悬停在带 data-bigdot 标签的元素上时，指针放大           */
+/* -------------------------------------------------------------------------- */
+// 思路：
+// 1. 用属性选择器选中所有带 data-bigdot="true" 的元素
+// 2. 通过 jQuery 的 .hover(enter, leave) 同时绑定进入/离开事件
+// 3. 进入时给 .mousePointer 添加 .big 类，离开时移除；放大效果交给 CSS 处理
+const allElements = $('div[data-bigdot=true]');
+console.log(allElements);
+
+allElements.hover(() => {
+    // 鼠标进入：指针放大
+    $pointer.addClass('big');
+}, () => {
+    // 鼠标离开：恢复默认大小
+    $pointer.removeClass('big');
+});
