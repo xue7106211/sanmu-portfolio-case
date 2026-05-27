@@ -142,6 +142,16 @@ html, body {
     margin-right: 16px;
     /* 占位文字斜一点，后续换 SVG */
     letter-spacing: 0.5px;
+    /* 持续旋转：复用 .circle-text 已经定义好的 spin 关键帧，
+       周期慢一些（10s）让奖章看起来更稳重 */
+    animation: spin 10s linear infinite;
+}
+
+/* 鼠标悬停时把动画暂停在当前帧；
+   animation-play-state 取值：running（默认）/ paused
+   离开时移除 :hover，自动恢复 running，从暂停的角度继续转，不会跳回 0deg */
+.badge:hover {
+    animation-play-state: paused;
 }
 
 /* ----------------------------- 老派开关 toggle ---------------------------- */
@@ -296,6 +306,12 @@ html, body {
     height: 120px;
     /* 持续旋转，营造圆形跑马灯效果；旋转中心默认就是元素中心 */
     animation: spin 8s linear infinite;
+}
+
+/* 鼠标悬停时暂停旋转：animation-play-state 会保留当前角度，
+   离开后从暂停处继续转，不会跳回 0deg */
+.circle-text:hover {
+    animation-play-state: paused;
 }
 
 /* 内嵌的 SVG 撑满父容器，作为环形文字的画布 */
