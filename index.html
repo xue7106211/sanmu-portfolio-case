@@ -30,7 +30,16 @@
             <div class="top-bar">
                 <span class="brand">Portfolio</span>
                 <div class="badge" data-bigdot="true">OFFICIAL<br>DESIGN<br>AWARDS</div>
-                <div class="toggle" data-bigdot="true">Switch to<br>old school</div>
+                <!-- 用 input + label 实现纯 CSS 开关：input 隐藏但仍可被键盘聚焦，
+                     label 通过 for 与 input 关联，点击 label 即可切换 :checked 状态 -->
+                <input type="checkbox" id="toggle-old-school" class="toggle__input" />
+                <label for="toggle-old-school" class="toggle" data-bigdot="true">
+                    <!-- 开关轨道（外壳）+ 滑块（thumb），位置切换全靠 :checked -->
+                    <span class="toggle__switch" aria-hidden="true">
+                        <span class="toggle__thumb"></span>
+                    </span>
+                    <span class="toggle__text">Switch to<br>old school</span>
+                </label>
             </div>
             <div class="hero">
                 <p class="hero__greeting">Hi —</p>

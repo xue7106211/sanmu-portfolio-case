@@ -1,3 +1,11 @@
+/* canvas[resize]{
+    height: 100%;
+    width: 100%;
+    border: 10px solid rebeccapurple;
+    box-sizing: border-box;
+    display: block;
+} */
+
 /* 全局重置：让 html 与 body 占满整个视口，并清除浏览器默认外边距 */
 html, body {
     /* 清除默认外边距，避免页面四周出现白边 */
@@ -20,14 +28,6 @@ html, body {
 /* 隐藏系统默认光标，改用自定义指针 */
 html, body {
     cursor: none;
-}
-
-canvas[resize]{
-    height: 100%;
-    width: 100%;
-    border: 10px solid rebeccapurple;
-    box-sizing: border-box;
-    display: block;
 }
 
 .mousePointer {
@@ -64,12 +64,12 @@ canvas[resize]{
 /* 鼠标悬停在 data-bigdot 元素上时，由 JS 给 .mousePointer 加上 .big 类 */
 .mousePointer.big {
     /* 放大尺寸：从 16px 变到 80px */
-    width: 80px;
-    height: 80px;
+    width: 44px;
+    height: 44px;
 
     /* 用半透明白色作为底色，配合下面的 mix-blend-mode: difference
        做出反色效果——白 - 任意颜色 = 该颜色的反相色 */
-    background: rgba(255, 255, 255, 0.85);
+    background: rgba(255, 255, 255, 0.252);
 
     /* 毛玻璃：模糊指针"下方"的页面内容；saturate 让色彩更鲜活
        -webkit- 前缀兼容部分 Safari 版本 */
@@ -144,25 +144,89 @@ canvas[resize]{
     letter-spacing: 0.5px;
 }
 
-/* 右上角 "Switch to old school" 开关（伪开关 + 文案） */
+/* ----------------------------- 老派开关 toggle ---------------------------- */
+/* 结构：
+   <input type="checkbox" .toggle__input />
+   <label .toggle>
+     <span .toggle__switch>
+       <span .toggle__thumb></span>
+     </span>
+     <span .toggle__text>...</span>
+   </label>
+
+   思路：
+   1. checkbox 视觉上完全隐藏，但仍占据无障碍语义和可聚焦性；
+   2. label 通过 for 与 checkbox 关联，点击 label 就会切换 :checked；
+   3. 用 .toggle__input:checked ~ .toggle 的兄弟选择器把状态映射到样式上；
+   4. thumb 通过 transform: translateX 在轨道两端滑动，并加 transition 做动画。 */
+
+/* 视觉上隐藏 checkbox，但保留可访问性（屏幕阅读器/键盘 tab 仍可达） */
+.toggle__input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    border: 0;
+    clip: rect(0 0 0 0);
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+/* label 作为整个开关的点击区域 */
 .toggle {
     /* 用 flex 把开关图形和文案并排 */
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: 8px;
     font-size: 11px;
     color: #111;
     line-height: 1.3;
+    /* 让 label 表现得像可点击控件 */
+    cursor: none;
+    user-select: none;
 }
-/* 用 ::before 画一个 pill 形状的开关（黑底白圆点） */
-.toggle::before {
-    content: "";
+
+/* 开关轨道：pill 形外壳 */
+.toggle__switch {
+    position: relative;
     width: 36px;
     height: 18px;
     border-radius: 999px;
     background: #111;
-    /* 用径向渐变在右侧画一个白色小圆点，模拟开关滑块 */
-    background-image: radial-gradient(circle at 75% 50%, #fff 5px, transparent 6px);
+    /* 默认与选中态之间的颜色过渡 */
+    transition: background 0.25s ease;
+    flex-shrink: 0;
+}
+
+/* 滑块：靠 left + transform 在轨道里左右滑动 */
+.toggle__thumb {
+    position: absolute;
+    top: 50%;
+    left: 3px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #fff;
+    /* 起点：垂直居中，水平方向不偏移 */
+    transform: translate(0, -50%);
+    transition: transform 0.25s ease;
+}
+
+/* 选中态：兄弟选择器把状态映射到 label 上的样式 */
+.toggle__input:checked ~ .toggle .toggle__switch {
+    /* 老派模式：用品牌绿替换黑底，呼应自定义指针的颜色 */
+    background: #00ee38;
+}
+.toggle__input:checked ~ .toggle .toggle__thumb {
+    /* 滑块平移到右端：轨道宽 36 - 滑块 12 - 左右各 3 的内边距 = 18 */
+    transform: translate(18px, -50%);
+}
+
+/* 键盘聚焦时给轨道描边，照顾可访问性 */
+.toggle__input:focus-visible ~ .toggle .toggle__switch {
+    outline: 2px solid #00ee38;
+    outline-offset: 2px;
 }
 
 /* ============ 第 2 行：巨型标题 ============ */
