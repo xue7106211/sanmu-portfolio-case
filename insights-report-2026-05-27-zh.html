@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>Claude Code 使用洞察报告</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; background: #f8fafc; color: #334155; line-height: 1.65; padding: 48px 24px; }
+    .container { max-width: 800px; margin: 0 auto; }
+    h1 { font-size: 32px; font-weight: 700; color: #0f172a; margin-bottom: 8px; }
+    h2 { font-size: 20px; font-weight: 600; color: #0f172a; margin-top: 48px; margin-bottom: 16px; }
+    .subtitle { color: #64748b; font-size: 15px; margin-bottom: 32px; }
+    .nav-toc { display: flex; flex-wrap: wrap; gap: 8px; margin: 24px 0 32px 0; padding: 16px; background: white; border-radius: 8px; border: 1px solid #e2e8f0; }
+    .nav-toc a { font-size: 12px; color: #64748b; text-decoration: none; padding: 6px 12px; border-radius: 6px; background: #f1f5f9; transition: all 0.15s; }
+    .nav-toc a:hover { background: #e2e8f0; color: #334155; }
+    .stats-row { display: flex; gap: 24px; margin-bottom: 40px; padding: 20px 0; border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; flex-wrap: wrap; }
+    .stat { text-align: center; }
+    .stat-value { font-size: 24px; font-weight: 700; color: #0f172a; }
+    .stat-label { font-size: 11px; color: #64748b; text-transform: uppercase; }
+    .at-a-glance { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 1px solid #f59e0b; border-radius: 12px; padding: 20px 24px; margin-bottom: 32px; }
+    .glance-title { font-size: 16px; font-weight: 700; color: #92400e; margin-bottom: 16px; }
+    .glance-sections { display: flex; flex-direction: column; gap: 12px; }
+    .glance-section { font-size: 14px; color: #78350f; line-height: 1.6; }
+    .glance-section strong { color: #92400e; }
+    .see-more { color: #b45309; text-decoration: none; font-size: 13px; white-space: nowrap; }
+    .see-more:hover { text-decoration: underline; }
+    .project-areas { display: flex; flex-direction: column; gap: 12px; margin-bottom: 32px; }
+    .project-area { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; }
+    .area-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .area-name { font-weight: 600; font-size: 15px; color: #0f172a; }
+    .area-count { font-size: 12px; color: #64748b; background: #f1f5f9; padding: 2px 8px; border-radius: 4px; }
+    .area-desc { font-size: 14px; color: #475569; line-height: 1.5; }
+    .narrative { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin-bottom: 24px; }
+    .narrative p { margin-bottom: 12px; font-size: 14px; color: #475569; line-height: 1.7; }
+    .key-insight { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px 16px; margin-top: 12px; font-size: 14px; color: #166534; }
+    .section-intro { font-size: 14px; color: #64748b; margin-bottom: 16px; }
+    .big-wins { display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px; }
+    .big-win { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; }
+    .big-win-title { font-weight: 600; font-size: 15px; color: #166534; margin-bottom: 8px; }
+    .big-win-desc { font-size: 14px; color: #15803d; line-height: 1.5; }
+    .friction-categories { display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px; }
+    .friction-category { background: #fef2f2; border: 1px solid #fca5a5; border-radius: 8px; padding: 16px; }
+    .friction-title { font-weight: 600; font-size: 15px; color: #991b1b; margin-bottom: 6px; }
+    .friction-desc { font-size: 13px; color: #7f1d1d; margin-bottom: 10px; }
+    .friction-examples { margin: 0 0 0 20px; font-size: 13px; color: #334155; }
+    .friction-examples li { margin-bottom: 4px; }
+    .claude-md-section { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 16px; margin-bottom: 20px; }
+    .claude-md-section h3 { font-size: 14px; font-weight: 600; color: #1e40af; margin: 0 0 12px 0; }
+    .claude-md-actions { margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #dbeafe; }
+    .copy-all-btn { background: #2563eb; color: white; border: none; border-radius: 4px; padding: 6px 12px; font-size: 12px; cursor: pointer; font-weight: 500; transition: all 0.2s; }
+    .copy-all-btn:hover { background: #1d4ed8; }
+    .copy-all-btn.copied { background: #16a34a; }
+    .claude-md-item { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px; padding: 10px 0; border-bottom: 1px solid #dbeafe; }
+    .claude-md-item:last-child { border-bottom: none; }
+    .cmd-checkbox { margin-top: 2px; }
+    .cmd-code { background: white; padding: 8px 12px; border-radius: 4px; font-size: 12px; color: #1e40af; border: 1px solid #bfdbfe; font-family: monospace; display: block; white-space: pre-wrap; word-break: break-word; flex: 1; }
+    .cmd-why { font-size: 12px; color: #64748b; width: 100%; padding-left: 24px; margin-top: 4px; }
+    .features-section, .patterns-section { display: flex; flex-direction: column; gap: 12px; margin: 16px 0; }
+    .feature-card { background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 16px; }
+    .pattern-card { background: #f0f9ff; border: 1px solid #7dd3fc; border-radius: 8px; padding: 16px; }
+    .feature-title, .pattern-title { font-weight: 600; font-size: 15px; color: #0f172a; margin-bottom: 6px; }
+    .feature-oneliner { font-size: 14px; color: #475569; margin-bottom: 8px; }
+    .pattern-summary { font-size: 14px; color: #475569; margin-bottom: 8px; }
+    .feature-why, .pattern-detail { font-size: 13px; color: #334155; line-height: 1.5; }
+    .feature-examples { margin-top: 12px; }
+    .feature-example { padding: 8px 0; border-top: 1px solid #d1fae5; }
+    .feature-example:first-child { border-top: none; }
+    .example-desc { font-size: 13px; color: #334155; margin-bottom: 6px; }
+    .example-code-row { display: flex; align-items: flex-start; gap: 8px; }
+    .example-code { flex: 1; background: #f1f5f9; padding: 8px 12px; border-radius: 4px; font-family: monospace; font-size: 12px; color: #334155; overflow-x: auto; white-space: pre-wrap; }
+    .copyable-prompt-section { margin-top: 12px; padding-top: 12px; border-top: 1px solid #e2e8f0; }
+    .copyable-prompt-row { display: flex; align-items: flex-start; gap: 8px; }
+    .copyable-prompt { flex: 1; background: #f8fafc; padding: 10px 12px; border-radius: 4px; font-family: monospace; font-size: 12px; color: #334155; border: 1px solid #e2e8f0; white-space: pre-wrap; line-height: 1.5; }
+    .feature-code { background: #f8fafc; padding: 12px; border-radius: 6px; margin-top: 12px; border: 1px solid #e2e8f0; display: flex; align-items: flex-start; gap: 8px; }
+    .feature-code code { flex: 1; font-family: monospace; font-size: 12px; color: #334155; white-space: pre-wrap; }
+    .pattern-prompt { background: #f8fafc; padding: 12px; border-radius: 6px; margin-top: 12px; border: 1px solid #e2e8f0; }
+    .pattern-prompt code { font-family: monospace; font-size: 12px; color: #334155; display: block; white-space: pre-wrap; margin-bottom: 8px; }
+    .prompt-label { font-size: 11px; font-weight: 600; text-transform: uppercase; color: #64748b; margin-bottom: 6px; }
+    .copy-btn { background: #e2e8f0; border: none; border-radius: 4px; padding: 4px 8px; font-size: 11px; cursor: pointer; color: #475569; flex-shrink: 0; }
+    .copy-btn:hover { background: #cbd5e1; }
+    .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin: 24px 0; }
+    .chart-card { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; }
+    .chart-title { font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; margin-bottom: 12px; }
+    .bar-row { display: flex; align-items: center; margin-bottom: 6px; }
+    .bar-label { width: 130px; font-size: 11px; color: #475569; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .bar-track { flex: 1; height: 6px; background: #f1f5f9; border-radius: 3px; margin: 0 8px; }
+    .bar-fill { height: 100%; border-radius: 3px; }
+    .bar-value { width: 36px; font-size: 11px; font-weight: 500; color: #64748b; text-align: right; }
+    .empty { color: #94a3b8; font-size: 13px; }
+    .horizon-section { display: flex; flex-direction: column; gap: 16px; }
+    .horizon-card { background: linear-gradient(135deg, #faf5ff 0%, #f5f3ff 100%); border: 1px solid #c4b5fd; border-radius: 8px; padding: 16px; }
+    .horizon-title { font-weight: 600; font-size: 15px; color: #5b21b6; margin-bottom: 8px; }
+    .horizon-possible { font-size: 14px; color: #334155; margin-bottom: 10px; line-height: 1.5; }
+    .horizon-tip { font-size: 13px; color: #6b21a8; background: rgba(255,255,255,0.6); padding: 8px 12px; border-radius: 4px; }
+    .fun-ending { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 1px solid #fbbf24; border-radius: 12px; padding: 24px; margin-top: 40px; text-align: center; }
+    .fun-headline { font-size: 18px; font-weight: 600; color: #78350f; margin-bottom: 8px; }
+    .fun-detail { font-size: 14px; color: #92400e; }
+    @media (max-width: 640px) { .charts-row { grid-template-columns: 1fr; } .stats-row { justify-content: center; } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Claude Code 使用洞察报告</h1>
+    <p class="subtitle">34 个分析会话（共 47 个），246 条消息 | 2026-04-24 至 2026-05-26</p>
+
+    <div class="at-a-glance">
+      <div class="glance-title">概览</div>
+      <div class="glance-sections">
+        <div class="glance-section"><strong>做得好的地方：</strong>你围绕 Figma 多设备适配建立了一套基于自有 SKILL.md 的成熟、可复用的工作流，并把 skill 当作可测试的产物来对待——你为 git PR skill 跑的 6 个 subagent 评估测得 +19% 的提升，是实打实严谨的 prompt engineering。kumo-ui 的克隆项目是另一个亮点：通过 brainstorm → spec → plan 的分阶段推进，在放手让 subagent 完成 16 个任务前先把方向钉死，最终产出了完整、带文档的 Next.js 应用。<a href="#section-wins" class="see-more">查看亮点 →</a></div>
+        <div class="glance-section"><strong>制约你的地方：</strong>Claude 这一侧反复出现「表面套用 SKILL.md 规则、不查设备专属上下文」的问题——键盘被错误删除发生过两次、对话框位置错位、Menu 组件被遗漏；Claude 在执行破坏性动作前需要更强的「先验证、再变换」推理。你这一侧，会话频繁卡在交互式 CLI 提示和权限拒绝上，Claude 的 AskUserQuestion 经常被你打断——说明你更希望它带着合理默认值往前走，而不是停下来问。<a href="#section-friction" class="see-more">查看摩擦点 →</a></div>
+        <div class="glance-section"><strong>可以马上拿来用的快速优化：</strong>把多设备 Figma 适配固化成一个自定义 Skill，内置预执行清单（字体加载、切页、查阅设备映射、使用相对坐标）——你其实已经在多个会话里把规格写齐了。再配一个 Hook，在生成 frame 后自动跑一次差异校验，让被遗漏的状态（Menu、删除对话框）在你看到之前就被捕获。<a href="#section-features" class="see-more">查看建议功能 →</a></div>
+        <div class="glance-section"><strong>更进一步的工作流：</strong>随着模型能力提升，你那种「事后回顾驱动 skill 迭代」的做法可以变成持续闭环：一队验证 subagent 并行审计每张生成的 frame，对照设备规格自动重试失败项——把多个相似的适配会话压缩成一次 prompt 调用。再往后，依托你成功克隆组件库的经验，可以做到「给 Claude 一个设计系统 URL，自动产出经过测试的完整 Next.js 实现」，并行 agent 反复对比截图迭代到像素级吻合。<a href="#section-horizon" class="see-more">查看远期方向 →</a></div>
+      </div>
+    </div>
+
+    <nav class="nav-toc">
+      <a href="#section-work">你的主要工作内容</a>
+      <a href="#section-usage">你如何使用 Claude Code</a>
+      <a href="#section-wins">亮点工作</a>
+      <a href="#section-friction">摩擦与问题</a>
+      <a href="#section-features">建议尝试的功能</a>
+      <a href="#section-patterns">新使用模式</a>
+      <a href="#section-horizon">远期方向</a>
+    </nav>
+
+    <div class="stats-row">
+      <div class="stat"><div class="stat-value">246</div><div class="stat-label">消息数</div></div>
+      <div class="stat"><div class="stat-value">+5,392/-388</div><div class="stat-label">代码行数</div></div>
+      <div class="stat"><div class="stat-value">56</div><div class="stat-label">涉及文件</div></div>
+      <div class="stat"><div class="stat-value">13</div><div class="stat-label">活跃天数</div></div>
+      <div class="stat"><div class="stat-value">18.9</div><div class="stat-label">每日消息</div></div>
+    </div>
+
+    <h2 id="section-work">你的主要工作内容</h2>
+    <div class="project-areas">
+      <div class="project-area">
+        <div class="area-header">
+          <span class="area-name">Figma 多设备设计适配</span>
+          <span class="area-count">~14 个会话</span>
+        </div>
+        <div class="area-desc">大量使用 Figma MCP 插件，把移动端设计（笔记类应用、各种浮层）适配到 Fold 与 Pad 的横竖屏形态，通常单次会话产出 4 个设备变体，并使用带元信息的 section 命名做溯源。Claude 按 SKILL.md 驱动的流程执行：字体预检 → 布局判定 → 校验。但反复出现的摩擦点包括：键盘处理、对话框定位，以及 menu、浮层等组件状态被遗漏。</div>
+      </div>
+      <div class="project-area">
+        <div class="area-header">
+          <span class="area-name">Skill 编写与工作流优化</span>
+          <span class="area-count">~7 个会话</span>
+        </div>
+        <div class="area-desc">迭代地审计、重构、压缩 SKILL.md 文件和 skill 仓库——包括阶段合并、去重、生成 manifest，以及横跨 12+ 文件的 bug 修复。还创建了一个 git PR/commit 描述生成 skill，用 subagent 跑评估，测得 +19% 提升；并分析了 skill 执行链，找出真正驱动正确结果的关键文件。</div>
+      </div>
+      <div class="project-area">
+        <div class="area-header">
+          <span class="area-name">静态站点与组件库构建</span>
+          <span class="area-count">~4 个会话</span>
+        </div>
+        <div class="area-desc">从零构建前端项目：从 Figma 出发的 Vite + Tailwind 静态站点（带侧栏折叠交互）、kumo-ui.com 的 1:1 Next.js 学习项目（含 40 个组件 demo）、以及对 MIUIX 组件库的探索与文档生成。较大型多任务工作均采用 subagent 驱动的实现方式。</div>
+      </div>
+      <div class="project-area">
+        <div class="area-header">
+          <span class="area-name">Git 工作流与周报</span>
+          <span class="area-count">~5 个会话</span>
+        </div>
+        <div class="area-desc">日常 git 操作：状态检查、冲突解决、中文提交信息、推送（共 8 次提交）。Claude 通过总结 commit 历史和项目迭代生成结构化周报，并回答了一些 git 命令的临时问题（比如 stash list）。</div>
+      </div>
+      <div class="project-area">
+        <div class="area-header">
+          <span class="area-name">工具配置与技术问答</span>
+          <span class="area-count">~4 个会话</span>
+        </div>
+        <div class="area-desc">安装 MCP 插件（MagicPath、GitHub、emilkowalski skill 包），偶尔被交互式 prompt 和 OAuth 流程卡住，需要 --yes/--global 标志。还处理过关于 Figma Plugin API 行为的诊断问题（dynamic-page 模式、loadAllPagesAsync）以及关于 Claude Code 自身的问题——其中包括一次自我纠正了的虚构 /cwd 命令事件。</div>
+      </div>
+    </div>
+
+    <div class="charts-row">
+      <div class="chart-card">
+        <div class="chart-title">你想做什么</div>
+        <div class="bar-row"><div class="bar-label">Figma 多设备适配</div><div class="bar-track"><div class="bar-fill" style="width:100%;background:#2563eb"></div></div><div class="bar-value">11</div></div>
+        <div class="bar-row"><div class="bar-label">Git Commit</div><div class="bar-track"><div class="bar-fill" style="width:72.7%;background:#2563eb"></div></div><div class="bar-value">8</div></div>
+        <div class="bar-row"><div class="bar-label">Figma 设计适配</div><div class="bar-track"><div class="bar-fill" style="width:45.5%;background:#2563eb"></div></div><div class="bar-value">5</div></div>
+        <div class="bar-row"><div class="bar-label">带元信息的 section 命名</div><div class="bar-track"><div class="bar-fill" style="width:36.4%;background:#2563eb"></div></div><div class="bar-value">4</div></div>
+        <div class="bar-row"><div class="bar-label">文档重构</div><div class="bar-track"><div class="bar-fill" style="width:36.4%;background:#2563eb"></div></div><div class="bar-value">4</div></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">高频工具调用</div>
+        <div class="bar-row"><div class="bar-label">Figma · use_figma</div><div class="bar-track"><div class="bar-fill" style="width:100%;background:#0891b2"></div></div><div class="bar-value">324</div></div>
+        <div class="bar-row"><div class="bar-label">TaskUpdate</div><div class="bar-track"><div class="bar-fill" style="width:95%;background:#0891b2"></div></div><div class="bar-value">308</div></div>
+        <div class="bar-row"><div class="bar-label">Read</div><div class="bar-track"><div class="bar-fill" style="width:84.3%;background:#0891b2"></div></div><div class="bar-value">273</div></div>
+        <div class="bar-row"><div class="bar-label">Bash</div><div class="bar-track"><div class="bar-fill" style="width:70.4%;background:#0891b2"></div></div><div class="bar-value">228</div></div>
+        <div class="bar-row"><div class="bar-label">TaskCreate</div><div class="bar-track"><div class="bar-fill" style="width:52.5%;background:#0891b2"></div></div><div class="bar-value">170</div></div>
+        <div class="bar-row"><div class="bar-label">Figma · get_screenshot</div><div class="bar-track"><div class="bar-fill" style="width:28.1%;background:#0891b2"></div></div><div class="bar-value">91</div></div>
+      </div>
+    </div>
+
+    <div class="charts-row">
+      <div class="chart-card">
+        <div class="chart-title">语言分布</div>
+        <div class="bar-row"><div class="bar-label">Markdown</div><div class="bar-track"><div class="bar-fill" style="width:100%;background:#10b981"></div></div><div class="bar-value">236</div></div>
+        <div class="bar-row"><div class="bar-label">JSON</div><div class="bar-track"><div class="bar-fill" style="width:12.3%;background:#10b981"></div></div><div class="bar-value">29</div></div>
+        <div class="bar-row"><div class="bar-label">TypeScript</div><div class="bar-track"><div class="bar-fill" style="width:6.8%;background:#10b981"></div></div><div class="bar-value">16</div></div>
+        <div class="bar-row"><div class="bar-label">CSS</div><div class="bar-track"><div class="bar-fill" style="width:3.4%;background:#10b981"></div></div><div class="bar-value">8</div></div>
+        <div class="bar-row"><div class="bar-label">HTML</div><div class="bar-track"><div class="bar-fill" style="width:3%;background:#10b981"></div></div><div class="bar-value">7</div></div>
+        <div class="bar-row"><div class="bar-label">Shell</div><div class="bar-track"><div class="bar-fill" style="width:3%;background:#10b981"></div></div><div class="bar-value">7</div></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">会话类型</div>
+        <div class="bar-row"><div class="bar-label">多任务</div><div class="bar-track"><div class="bar-fill" style="width:100%;background:#8b5cf6"></div></div><div class="bar-value">14</div></div>
+        <div class="bar-row"><div class="bar-label">单任务</div><div class="bar-track"><div class="bar-fill" style="width:92.9%;background:#8b5cf6"></div></div><div class="bar-value">13</div></div>
+        <div class="bar-row"><div class="bar-label">迭代打磨</div><div class="bar-track"><div class="bar-fill" style="width:28.6%;background:#8b5cf6"></div></div><div class="bar-value">4</div></div>
+        <div class="bar-row"><div class="bar-label">快速问答</div><div class="bar-track"><div class="bar-fill" style="width:14.3%;background:#8b5cf6"></div></div><div class="bar-value">2</div></div>
+        <div class="bar-row"><div class="bar-label">探索</div><div class="bar-track"><div class="bar-fill" style="width:7.1%;background:#8b5cf6"></div></div><div class="bar-value">1</div></div>
+      </div>
+    </div>
+
+    <h2 id="section-usage">你如何使用 Claude Code</h2>
+    <div class="narrative">
+      <p>你的主线工作是<strong>设计到代码的产线工作流</strong>，其中 Figma 多设备适配（Fold/Pad，横竖屏变体）是你最具一致性的重复任务，出现在 11+ 会话里。你的交互风格<strong>流程驱动、围绕 skill 展开</strong>：与其每次都临时描述任务，不如投入精力构建可复用的 SKILL.md 工作流，再不断审计、压缩和打磨它们。每次成功执行后，你常常做<strong>事后回顾</strong>——让 Claude 分析为什么某处出了问题（比如键盘删除事件、Menu 组件遗漏、删除对话框错位），并提出最小改动以防再犯。这说明你把每次会话既当作交付，也当作工具的训练信号。</p>
+      <p>你<strong>放手让 Claude 跑长链自动化</strong>（TaskUpdate 调用了 308 次、Agent 44 次），但<strong>在终点是个眼神犀利的验收者</strong>——能抓出诸如错误的 NavigationBar 变体、对话框被居中而非贴底 12dp、自动校验漏掉的组件状态。当 Claude 通过 AskUserQuestion 反复发问时，你直接打断，而不是配合它，传递的信号是你更喜欢它<strong>带着合理默认值继续</strong>，而不是来要授权。值得一提的是，当 Claude 的诊断过于复杂或偏题时，你会直接顶回去——比如「但是我的多设备适配跑得是对的」逼它重新审视真实执行链，或要求它简化根因分析。</p>
+      <p>你的沟通<strong>简短且双语</strong>（中文 commit message、中文重写 CLAUDE.md），并且善于批量打包请求——一个会话可能同时包含 git 冲突解决、Figma 适配、插件解释和 SKILL.md 优化。你能容忍摩擦（字体预加载错误、权限拦截、page context 问题），只要 Claude 自我纠错就行；但你不会容忍<strong>不结合上下文的死板规则套用</strong>，反复指出 Claude 套用表面规则、却不去查阅设备专属映射的情况。</p>
+      <div class="key-insight"><strong>核心模式：</strong>你把 Claude 当作 Figma 适配的产线，同时基于观察到的失败案例持续审计和打磨底层 skill。</div>
+    </div>
+
+    <div class="chart-card" style="margin: 24px 0;">
+      <div class="chart-title">用户响应时间分布</div>
+      <div class="bar-row"><div class="bar-label">2-10 秒</div><div class="bar-track"><div class="bar-fill" style="width:42.3%;background:#6366f1"></div></div><div class="bar-value">11</div></div>
+      <div class="bar-row"><div class="bar-label">10-30 秒</div><div class="bar-track"><div class="bar-fill" style="width:100%;background:#6366f1"></div></div><div class="bar-value">26</div></div>
+      <div class="bar-row"><div class="bar-label">30 秒-1 分</div><div class="bar-track"><div class="bar-fill" style="width:80.8%;background:#6366f1"></div></div><div class="bar-value">21</div></div>
+      <div class="bar-row"><div class="bar-label">1-2 分</div><div class="bar-track"><div class="bar-fill" style="width:53.8%;background:#6366f1"></div></div><div class="bar-value">14</div></div>
+      <div class="bar-row"><div class="bar-label">2-5 分</div><div class="bar-track"><div class="bar-fill" style="width:57.7%;background:#6366f1"></div></div><div class="bar-value">15</div></div>
+      <div class="bar-row"><div class="bar-label">5-15 分</div><div class="bar-track"><div class="bar-fill" style="width:73.1%;background:#6366f1"></div></div><div class="bar-value">19</div></div>
+      <div class="bar-row"><div class="bar-label">大于 15 分</div><div class="bar-track"><div class="bar-fill" style="width:69.2%;background:#6366f1"></div></div><div class="bar-value">18</div></div>
+      <div style="font-size: 12px; color: #64748b; margin-top: 8px;">中位数：83.0 秒 · 平均：335.1 秒</div>
+    </div>
+
+    <div class="chart-card" style="margin: 24px 0;">
+      <div class="chart-title">并行多开会话</div>
+      <div style="display: flex; gap: 24px; margin: 12px 0;">
+        <div style="text-align: center;">
+          <div style="font-size: 24px; font-weight: 700; color: #7c3aed;">1</div>
+          <div style="font-size: 11px; color: #64748b; text-transform: uppercase;">重叠次数</div>
+        </div>
+        <div style="text-align: center;">
+          <div style="font-size: 24px; font-weight: 700; color: #7c3aed;">2</div>
+          <div style="font-size: 11px; color: #64748b; text-transform: uppercase;">涉及会话</div>
+        </div>
+        <div style="text-align: center;">
+          <div style="font-size: 24px; font-weight: 700; color: #7c3aed;">1%</div>
+          <div style="font-size: 11px; color: #64748b; text-transform: uppercase;">消息占比</div>
+        </div>
+      </div>
+      <p style="font-size: 13px; color: #475569; margin-top: 12px;">你偶尔会同时跑多个 Claude Code 会话。当会话在时间上重叠时即被判为并行使用，意味着你存在并行工作流。</p>
+    </div>
+
+    <div class="charts-row">
+      <div class="chart-card">
+        <div class="chart-title">活跃时段（按本地时间分布）</div>
+        <div class="bar-row"><div class="bar-label">上午（6-12）</div><div class="bar-track"><div class="bar-fill" style="width:46%;background:#8b5cf6"></div></div><div class="bar-value">64</div></div>
+        <div class="bar-row"><div class="bar-label">下午（12-18）</div><div class="bar-track"><div class="bar-fill" style="width:100%;background:#8b5cf6"></div></div><div class="bar-value">139</div></div>
+        <div class="bar-row"><div class="bar-label">晚上（18-24）</div><div class="bar-track"><div class="bar-fill" style="width:30.9%;background:#8b5cf6"></div></div><div class="bar-value">43</div></div>
+        <div class="bar-row"><div class="bar-label">凌晨（0-6）</div><div class="bar-track"><div class="bar-fill" style="width:0%;background:#8b5cf6"></div></div><div class="bar-value">0</div></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">遇到的工具错误</div>
+        <div class="bar-row"><div class="bar-label">其他</div><div class="bar-track"><div class="bar-fill" style="width:100%;background:#dc2626"></div></div><div class="bar-value">48</div></div>
+        <div class="bar-row"><div class="bar-label">命令失败</div><div class="bar-track"><div class="bar-fill" style="width:6.3%;background:#dc2626"></div></div><div class="bar-value">3</div></div>
+        <div class="bar-row"><div class="bar-label">文件未找到</div><div class="bar-track"><div class="bar-fill" style="width:6.3%;background:#dc2626"></div></div><div class="bar-value">3</div></div>
+        <div class="bar-row"><div class="bar-label">用户拒绝</div><div class="bar-track"><div class="bar-fill" style="width:4.2%;background:#dc2626"></div></div><div class="bar-value">2</div></div>
+        <div class="bar-row"><div class="bar-label">文件已变动</div><div class="bar-track"><div class="bar-fill" style="width:2.1%;background:#dc2626"></div></div><div class="bar-value">1</div></div>
+        <div class="bar-row"><div class="bar-label">文件过大</div><div class="bar-track"><div class="bar-fill" style="width:2.1%;background:#dc2626"></div></div><div class="bar-value">1</div></div>
+      </div>
+    </div>
+
+    <h2 id="section-wins">亮点工作</h2>
+    <p class="section-intro">在 34 个分析会话中，你重度押注 Figma 设计工作流和 skill 工程，呈现出明显的「迭代打磨 + 元层级流程改进」模式。</p>
+    <div class="big-wins">
+      <div class="big-win">
+        <div class="big-win-title">基于 Skill 的多设备适配</div>
+        <div class="big-win-desc">你建立了一套可复用的工作流，把 Figma 设计跨 Fold 与 Pad 的横竖屏适配出来，并始终用带元信息的 section 命名做溯源。你的做法是「自动校验 + 出问题时事后做根因分析」，把每一次适配既当作交付物，也当作打磨 SKILL.md 的机会。</div>
+      </div>
+      <div class="big-win">
+        <div class="big-win-title">用评估驱动 Skill 开发</div>
+        <div class="big-win-desc">在做 git PR/commit skill 时，你跑了 6 个 subagent 的评估，对比有无 skill 的表现，量化得出 +19% 的提升再继续迭代。这种把 skill 当作可测试产物（而非纯文档）来对待的严谨度，体现了相当成熟的 prompt 与工作流工程能力。</div>
+      </div>
+      <div class="big-win">
+        <div class="big-win-title">规模化的「规格到实现」</div>
+        <div class="big-win-desc">在 kumo-ui.com 克隆项目里，你引导 Claude 走完 brainstorming → spec → plan 三个阶段，再放出 subagent 去执行 16 个任务，最终产出含 40/40 组件 demo 的完整 Next.js 应用。这种带显式规划 gate 的分阶段做法，让一个大项目稳稳落地，并产出包括项目文档在内的完整成果。</div>
+      </div>
+    </div>
+
+    <div class="charts-row">
+      <div class="chart-card">
+        <div class="chart-title">Claude 帮上忙最多的能力</div>
+        <div class="bar-row"><div class="bar-label">多文件同步修改</div><div class="bar-track"><div class="bar-fill" style="width:100%;background:#16a34a"></div></div><div class="bar-value">20</div></div>
+        <div class="bar-row"><div class="bar-label">解释清晰</div><div class="bar-track"><div class="bar-fill" style="width:40%;background:#16a34a"></div></div><div class="bar-value">8</div></div>
+        <div class="bar-row"><div class="bar-label">代码改动正确</div><div class="bar-track"><div class="bar-fill" style="width:15%;background:#16a34a"></div></div><div class="bar-value">3</div></div>
+        <div class="bar-row"><div class="bar-label">主动协助</div><div class="bar-track"><div class="bar-fill" style="width:10%;background:#16a34a"></div></div><div class="bar-value">2</div></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">任务结果</div>
+        <div class="bar-row"><div class="bar-label">未达成</div><div class="bar-track"><div class="bar-fill" style="width:6.3%;background:#8b5cf6"></div></div><div class="bar-value">1</div></div>
+        <div class="bar-row"><div class="bar-label">部分达成</div><div class="bar-track"><div class="bar-fill" style="width:25%;background:#8b5cf6"></div></div><div class="bar-value">4</div></div>
+        <div class="bar-row"><div class="bar-label">大部分达成</div><div class="bar-track"><div class="bar-fill" style="width:75%;background:#8b5cf6"></div></div><div class="bar-value">12</div></div>
+        <div class="bar-row"><div class="bar-label">完全达成</div><div class="bar-track"><div class="bar-fill" style="width:100%;background:#8b5cf6"></div></div><div class="bar-value">16</div></div>
+        <div class="bar-row"><div class="bar-label">不明确</div><div class="bar-track"><div class="bar-fill" style="width:6.3%;background:#8b5cf6"></div></div><div class="bar-value">1</div></div>
+      </div>
+    </div>
+
+    <h2 id="section-friction">摩擦与问题</h2>
+    <p class="section-intro">你的 Figma 多设备适配工作中反复出现「规则套用错误」与「执行期失败」，而权限和交互式 prompt 问题则频繁打断你的 CLI 流程。</p>
+    <div class="friction-categories">
+      <div class="friction-category">
+        <div class="friction-title">死板套用规则、不查设备专属上下文</div>
+        <div class="friction-desc">在多设备适配中执行 SKILL.md 规则时，Claude 经常套用表面规则（比如「移除移动端语义」），却不去查设备专属映射文件，导致你不得不反复回顾并修补 SKILL.md。把「变换前先查映射」这一类护栏内置到工作流里，能消除这些反复出现的纠正。</div>
+        <ul class="friction-examples">
+          <li>Claude 在适配时机械执行「移除移动端语义」规则、删除了键盘，但没意识到键盘其实是「搜索激活态」必要组成部分；之后再加回时尺寸还是错的。</li>
+          <li>Claude 在 Fold/Pad 上把删除对话框竖向居中，而不是按规格贴底 12dp，遗漏了设备尺寸规格，需要事后回顾并更新 SKILL.md。</li>
+        </ul>
+      </div>
+      <div class="friction-category">
+        <div class="friction-title">Figma 执行期错误，需要重试</div>
+        <div class="friction-desc">你的 Figma 适配执行经常踩到字体预加载错误、page context 问题，以及只有在校验阶段才浮现的尺寸/坐标假设错误。在 skill 里加一份更严的预执行清单（字体加载、切页、相对坐标），可以减少很多中途返工。</div>
+        <ul class="friction-examples">
+          <li>多次适配会话里出现字体预加载错误，导致文本/变体操作被迫重试。</li>
+          <li>Fold/Pad 竖屏 frame 的 StatusBar 宽度最初是错的；frame 坐标用了绝对而非相对 section 的定位——两类问题都是在校验阶段才被抓到。</li>
+        </ul>
+      </div>
+      <div class="friction-category">
+        <div class="friction-title">CLI 权限与交互式 prompt 卡顿</div>
+        <div class="friction-desc">你的 Bash、Skill 和安装命令反复卡在交互式 prompt 或权限拒绝上，打断节奏、需要手动介入。给包管理器和 CLI 默认带上非交互参数（--yes、--global），并预先放行常用工具权限，可以让这些步骤更顺畅。</div>
+        <ul class="friction-examples">
+          <li>`npm create vite -y` 和一次全局 skill 安装都卡在了 Claude 无法应对的交互式选择上，需要追加 --yes 标志。</li>
+          <li>评估和 Figma 工作中，Bash 与 Skill 工具调用因为权限模式被拦截，导致你只能手动跑命令，或在任务中途改配置。</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="charts-row">
+      <div class="chart-card">
+        <div class="chart-title">主要摩擦类型</div>
+        <div class="bar-row"><div class="bar-label">代码 bug</div><div class="bar-track"><div class="bar-fill" style="width:100%;background:#dc2626"></div></div><div class="bar-value">16</div></div>
+        <div class="bar-row"><div class="bar-label">方法不对</div><div class="bar-track"><div class="bar-fill" style="width:68.8%;background:#dc2626"></div></div><div class="bar-value">11</div></div>
+        <div class="bar-row"><div class="bar-label">动作被拒绝</div><div class="bar-track"><div class="bar-fill" style="width:37.5%;background:#dc2626"></div></div><div class="bar-value">6</div></div>
+        <div class="bar-row"><div class="bar-label">权限拦截</div><div class="bar-track"><div class="bar-fill" style="width:12.5%;background:#dc2626"></div></div><div class="bar-value">2</div></div>
+        <div class="bar-row"><div class="bar-label">误解需求</div><div class="bar-track"><div class="bar-fill" style="width:12.5%;background:#dc2626"></div></div><div class="bar-value">2</div></div>
+        <div class="bar-row"><div class="bar-label">规则误用</div><div class="bar-track"><div class="bar-fill" style="width:6.3%;background:#dc2626"></div></div><div class="bar-value">1</div></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">推断满意度（模型估算）</div>
+        <div class="bar-row"><div class="bar-label">不满意</div><div class="bar-track"><div class="bar-fill" style="width:12.7%;background:#eab308"></div></div><div class="bar-value">7</div></div>
+        <div class="bar-row"><div class="bar-label">大概率满意</div><div class="bar-track"><div class="bar-fill" style="width:100%;background:#eab308"></div></div><div class="bar-value">55</div></div>
+        <div class="bar-row"><div class="bar-label">满意</div><div class="bar-track"><div class="bar-fill" style="width:5.5%;background:#eab308"></div></div><div class="bar-value">3</div></div>
+      </div>
+    </div>
+
+    <h2 id="section-features">建议尝试的 Claude Code 功能</h2>
+    <div class="claude-md-section">
+      <h3>建议加入 CLAUDE.md 的内容</h3>
+      <p style="font-size: 12px; color: #64748b; margin-bottom: 12px;">直接复制粘贴到你的 CLAUDE.md 即可。</p>
+      <div class="claude-md-actions">
+        <button class="copy-all-btn" onclick="copyAllCheckedClaudeMd()">复制全部勾选项</button>
+      </div>
+
+      <div class="claude-md-item">
+        <input type="checkbox" id="cmd-0" class="cmd-checkbox" checked data-text="## Figma 多设备适配
+- 在删除或新增键盘前，必须查阅设备专属的 Keyboard.md 映射；键盘可能是某个状态（如搜索激活态）的必要组成部分
+- 在创建文本节点、克隆或切换 variant 之前，必须预加载字体（尤其是 MiSans）
+- 在创建 frame 前，必须切到目标 page
+- frame 坐标使用相对于 section 的定位，不要用绝对坐标
+- Auto Layout 工具栏使用 HUG；FILL 会错误地拉伸高度
+- 完成前对照源稿做完备性检查：所有源状态（对话框、浮层、菜单）都已被适配
+- 对话框默认贴底 12dp，除非另有规格指定">
+        <label for="cmd-0">
+          <code class="cmd-code">## Figma 多设备适配
+- 在删除或新增键盘前，必须查阅设备专属的 Keyboard.md 映射；键盘可能是某个状态（如搜索激活态）的必要组成部分
+- 在创建文本节点、克隆或切换 variant 之前，必须预加载字体（尤其是 MiSans）
+- 在创建 frame 前，必须切到目标 page
+- frame 坐标使用相对于 section 的定位，不要用绝对坐标
+- Auto Layout 工具栏使用 HUG；FILL 会错误地拉伸高度
+- 完成前对照源稿做完备性检查：所有源状态（对话框、浮层、菜单）都已被适配
+- 对话框默认贴底 12dp，除非另有规格指定</code>
+          <button class="copy-btn" onclick="copyCmdItem(0)">复制</button>
+        </label>
+        <div class="cmd-why">这些具体问题（键盘规则误用、字体预加载错误、Menu/对话框状态遗漏、对话框定位错误、FILL vs HUG、page context）在 5+ 多设备适配会话中反复出现，每次都需要你手动纠正。</div>
+      </div>
+
+      <div class="claude-md-item">
+        <input type="checkbox" id="cmd-1" class="cmd-checkbox" checked data-text="## Shell 与 CLI 约定
+- 包管理器和 CLI 工具一律使用非交互参数：`npm create vite -y`、`npm install --yes`、全局安装加 `--yes --global`
+- 避免会触发交互式选择 prompt 的命令；如果不可避免，先把这个限制说清楚，不要挂起">
+        <label for="cmd-1">
+          <code class="cmd-code">## Shell 与 CLI 约定
+- 包管理器和 CLI 工具一律使用非交互参数：`npm create vite -y`、`npm install --yes`、全局安装加 `--yes --global`
+- 避免会触发交互式选择 prompt 的命令；如果不可避免，先把这个限制说清楚，不要挂起</code>
+          <button class="copy-btn" onclick="copyCmdItem(1)">复制</button>
+        </label>
+        <div class="cmd-why">三个会话因交互式 prompt 卡住（npm create vite、全局 skill 安装、MagicPath 安装）——只要默认带非交互参数都可以避免。</div>
+      </div>
+
+      <div class="claude-md-item">
+        <input type="checkbox" id="cmd-2" class="cmd-checkbox" checked data-text="## 决策原则
+- 不要发明命令或参数。如果不确定某东西是否存在（比如某个 slash 命令），就明说并去核实，而不是编造（参考 /cwd 那次事件）
+- 优先带着合理默认值继续工作，而不是反复抛出澄清式提问；用户已经多次打断 AskUserQuestion 调用
+- 应用 SKILL.md 或 CLAUDE.md 里的「规则」前，先核实它在当前上下文（状态、设备、组件）中真的成立，再执行删除等破坏性动作">
+        <label for="cmd-2">
+          <code class="cmd-code">## 决策原则
+- 不要发明命令或参数。如果不确定某东西是否存在（比如某个 slash 命令），就明说并去核实，而不是编造（参考 /cwd 那次事件）
+- 优先带着合理默认值继续工作，而不是反复抛出澄清式提问；用户已经多次打断 AskUserQuestion 调用
+- 应用 SKILL.md 或 CLAUDE.md 里的「规则」前，先核实它在当前上下文（状态、设备、组件）中真的成立，再执行删除等破坏性动作</code>
+          <button class="copy-btn" onclick="copyCmdItem(2)">复制</button>
+        </label>
+        <div class="cmd-why">虚构 /cwd 命令、两次打断 AskUserQuestion，以及死板套用规则导致键盘删除——这些都在摩擦日志里反复出现。</div>
+      </div>
+    </div>
+
+    <p style="font-size: 13px; color: #64748b; margin-bottom: 12px;">直接把下面这些复制到 Claude Code，它会帮你配置好。</p>
+    <div class="features-section">
+      <div class="feature-card">
+        <div class="feature-title">自定义 Skill</div>
+        <div class="feature-oneliner">通过 /command 调用的可复用 markdown prompt</div>
+        <div class="feature-why"><strong>对你而言：</strong>「带元信息 section 命名的多设备 Figma 适配」这种需求你重复了 11+ 次。一个 `/adapt` skill 把设备变体（Fold/Pad LC/NLC、横竖屏）、字体预加载、切 page、完备性检查全部固化下来，可以直接消除那些反复出现的摩擦（键盘处理、Menu 遗漏、对话框定位）。</div>
+        <div class="feature-examples">
+          <div class="feature-example">
+            <div class="example-code-row">
+              <code class="example-code">mkdir -p .claude/skills/adapt &amp;&amp; cat &gt; .claude/skills/adapt/SKILL.md &lt;&lt;'EOF'
+# /adapt — 多设备 Figma 适配
+
+## 预执行清单
+1. 切到目标 Figma page
+2. 预加载 MiSans 及所需字体
+3. 阅读 Keyboard.md 设备映射
+4. 枚举所有源状态（对话框、浮层、菜单）
+
+## 目标设备
+- Fold 横屏 888x628 LC
+- Fold 竖屏 628x888 LC
+- Pad 横屏 NLC
+- Pad 竖屏 NLC
+
+## 规则
+- 对话框：所有设备贴底 12dp
+- 工具栏：Auto Layout HUG（不要 FILL）
+- 坐标：相对 section
+- Section 名称：包含时间戳 + LC/NLC 元信息
+
+## 执行后校验
+- 确认每个源状态都有 4 个变体
+- 跑一次自动尺寸检查
+EOF</code>
+              <button class="copy-btn" onclick="copyText(this)">复制</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-title">Hooks</div>
+        <div class="feature-oneliner">在生命周期事件上自动执行 shell 命令</div>
+        <div class="feature-why"><strong>对你而言：</strong>你提交频繁（8 次 commit，多为中文 message），并反复重构 SKILL.md。一个 pre-commit hook 跑 markdown lint、或者 post-edit hook 校验 SKILL.md 结构，可以提前抓出那种「documentation_refactoring / documentation_refactor」的重复目标——这本身就说明你在重复做清理工作。</div>
+        <div class="feature-examples">
+          <div class="feature-example">
+            <div class="example-code-row">
+              <code class="example-code">// .claude/settings.json
+{
+  "hooks": {
+    "PostToolUse": [{
+      "matcher": "Edit|Write",
+      "hooks": [{
+        "type": "command",
+        "command": "if [[ $CLAUDE_FILE_PATH == *SKILL.md ]]; then markdownlint $CLAUDE_FILE_PATH || true; fi"
+      }]
+    }]
+  }
+}</code>
+              <button class="copy-btn" onclick="copyText(this)">复制</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-title">MCP Servers</div>
+        <div class="feature-oneliner">通过 Model Context Protocol 把 Claude 连到外部工具/API</div>
+        <div class="feature-why"><strong>对你而言：</strong>你已经重度使用 Figma MCP（324 次调用），且尝试过在一个会话里同时安装 4 个 MCP。把 GitHub MCP 的 OAuth 走完之后，可以省下两个周报会话里手动统计 git status / commit 摘要的工作，并把 PR 描述自动化串到你的 /commit skill 实验里。</div>
+        <div class="feature-examples">
+          <div class="feature-example">
+            <div class="example-code-row">
+              <code class="example-code">claude mcp add github -- npx -y @modelcontextprotocol/server-github
+# 然后通过打印出来的 URL 完成 OAuth
+claude mcp list  # 验证连接</code>
+              <button class="copy-btn" onclick="copyText(this)">复制</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h2 id="section-patterns">新使用模式</h2>
+    <p style="font-size: 13px; color: #64748b; margin-bottom: 12px;">把下面这些复制进 Claude Code，它会带你完成。</p>
+    <div class="patterns-section">
+      <div class="pattern-card">
+        <div class="pattern-title">把 Figma 适配工作流固化一次，别再重复解释</div>
+        <div class="pattern-summary">34 个会话里有 11 个是几乎一模一样的「带元信息 section 名的多设备 Figma 适配」请求。把它转成单一的 /adapt skill，就不用再每次重复规格了。</div>
+        <div class="pattern-detail">你的会话呈现高度一致：相同的目标 frame（Fold/Pad × 横竖屏）、相同的元信息 section 命名、相同的反复失败（键盘、字体、page context、Menu 遗漏、对话框 12dp）。每次重复都要花配置时间，并且把同样的 bug 又带回来一次。一个内置清单 + 完备性校验的 skill，可以把原本 8 条消息的对话压缩成一次 /adapt 调用。</div>
+        <div class="copyable-prompt-section">
+          <div class="prompt-label">粘贴到 Claude Code：</div>
+          <div class="copyable-prompt-row">
+            <code class="copyable-prompt">看下我最近 10 个涉及 Figma 多设备适配的会话。把里面反复出现的规则、失败模式和纠正动作提取出来，整合成一个 .claude/skills/adapt/SKILL.md，让我可以通过 /adapt 调用。包含：预执行清单（切 page、字体预加载、源状态枚举）、设备目标矩阵、带时间戳的 section 命名约定、以及执行后的完备性校验步骤。</code>
+            <button class="copy-btn" onclick="copyText(this)">复制</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="pattern-card">
+        <div class="pattern-title">在破坏性动作前强化规则推理</div>
+        <div class="pattern-summary">键盘删除事件发生过两次：都是表面套用规则、不查上下文。加一条「删除前先核验」的习惯。</div>
+        <div class="pattern-detail">摩擦日志里 Claude 死板套用「移除移动端语义」规则，删了一个其实是「搜索激活态」必要组成的键盘，然后再加回时尺寸又错了。类似的过度套用也出现在对话框定位错误上。在任何删除或破坏性布局变更前加一道推理 checkpoint，可以拦下这些错误。</div>
+        <div class="copyable-prompt-section">
+          <div class="prompt-label">粘贴到 Claude Code：</div>
+          <div class="copyable-prompt-row">
+            <code class="copyable-prompt">在 Figma 适配过程中，在删除、移除或显著改动任何组件之前，先停下来用文字回答：(1) 我正在套用哪条规则？(2) 这条规则的前提条件是否真的匹配当前的状态/上下文？(3) 这个组件是否是某个我尚未考虑的状态的必要组成？三点都明确以后再继续。</code>
+            <button class="copy-btn" onclick="copyText(this)">复制</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="pattern-card">
+        <div class="pattern-title">少问，多用合理默认值</div>
+        <div class="pattern-summary">多个会话里 AskUserQuestion 都被你打断——你更希望 Claude 带着合理默认值继续。</div>
+        <div class="pattern-detail">两个会话因为 Claude 抛出澄清式提问而停滞或终止，而不是直接干。再加上 /cwd 编造事件，模式很清楚：Claude 应当倾向于「先说出假设、再继续行动」，而不是停下来要授权。尤其是你这种重复性高的适配任务，规格已经很清楚了，问问题反而是噪音。</div>
+        <div class="copyable-prompt-section">
+          <div class="prompt-label">粘贴到 Claude Code：</div>
+          <div class="copyable-prompt-row">
+            <code class="copyable-prompt">当我的请求有歧义时，不要使用 AskUserQuestion。改用：用一句话说出你的假设，继续完成工作，最后注明「我假设了 X——如果你想要 Y 请告诉我」。只有当继续可能造成数据丢失或难以撤销的变更时，才提问。</code>
+            <button class="copy-btn" onclick="copyText(this)">复制</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h2 id="section-horizon">远期方向</h2>
+    <p class="section-intro">你那条 Figma 多设备适配工作流正在成熟为一个可复用 Skill，但下一跃迁是自主编排——能从过去的摩擦中学习，并在你看到结果之前就完成自我校验。</p>
+    <div class="horizon-section">
+      <div class="horizon-card">
+        <div class="horizon-title">自我纠错的多设备适配流水线</div>
+        <div class="horizon-possible">不再是一次跑一个适配、靠事后回顾抓错（键盘缺失、对话框位置错、Menu 组件遗漏），而是放出一队并行的验证 subagent，对每张生成的 frame 按设备规则做审计——在你看到输出之前就完成。流水线会做源 vs 目标状态 diff、按 Keyboard.md 与设备规格校验尺寸/位置，并对失败项自动重试——把你那 11 次适配会话压成单次 prompt 的批处理任务。</div>
+        <div class="horizon-tip"><strong>怎么开始：</strong>用 Agent 工具按设备变体启动并行验证 subagent，并通过自定义 Skill 把过去的摩擦模式（键盘保留、对话框定位、Menu 包含）编码为自动化校验。</div>
+        <div class="pattern-prompt"><div class="prompt-label">粘贴到 Claude Code：</div><code>帮我构建一条自主的多设备 Figma 适配流水线 skill。需要：(1) 读取移动端源稿，识别所有组件状态（含浮层、对话框、键盘、菜单）；(2) 启动 4 个并行 subagent——每个对应一个目标 frame（Fold 横/竖、Pad 横/竖），各自完成适配；(3) 启动 4 个并行验证 subagent，做源 vs 目标 diff，对照 Keyboard.md 设备映射、对话框贴底 12dp 规则、NavigationBar 变体正确性、组件完备性进行校验；(4) 任一 frame 校验失败时，带着具体失败上下文自动重试；(5) 只有当 4 张 frame 都通过所有校验时才把控制权还给我，并附一份「捕获并纠正了什么」的总结。把过去会话里那些摩擦模式（键盘被删、对话框居中、Menu_ComponentSet 遗漏、错误的 NavigationBar 变体）编码为显式校验规则。</code><button class="copy-btn" onclick="copyText(this)">复制</button></div>
+      </div>
+
+      <div class="horizon-card">
+        <div class="horizon-title">通过失败挖掘演进 Skill</div>
+        <div class="horizon-possible">现在你的 SKILL.md 是事后被动改进的；但一个自主循环可以每周扫描你的会话记录，对反复出现的摩擦做聚类（规则误用、状态遗漏、字体加载重试），提出最小化的 SKILL.md 补丁，并附前后评估分数——类似你那个 6 subagent +19% 评估，只是常态化运行。这样每个错误都能沉淀成永久能力升级，而不需要手动回顾。</div>
+        <div class="horizon-tip"><strong>怎么开始：</strong>把 Agent 工具与你现有的评估 harness（6 subagent 打分）组合，做一个定时跑的 skill 改进工作流：提议 → 测试 → 提交 SKILL.md 修订。</div>
+        <div class="pattern-prompt"><div class="prompt-label">粘贴到 Claude Code：</div><code>给我做一个 'skill-evolver' 工作流，针对我的 skill 仓库运行。第 1 步：扫描最近的 Claude Code 会话记录和 git 历史，找出摩擦信号（用户纠正、回顾、「为什么你...」式消息、规则误用）。第 2 步：把失败按根因聚类，按频率排序。第 3 步：对 Top 3 类问题，起草最小化的 SKILL.md 补丁（增量规则，而非重写）。第 4 步：跑 6 subagent 评估，对比当前 SKILL.md 与打补丁版本在代表性任务上的表现，报告准确率差值。第 5 步：只有改进幅度 >5% 的补丁才提交，附一条总结失败模式的中文 commit message。整条流程自主跑完，最后给我一份 PR 风格的总结。</code><button class="copy-btn" onclick="copyText(this)">复制</button></div>
+      </div>
+
+      <div class="horizon-card">
+        <div class="horizon-title">从规格到产线的组件克隆</div>
+        <div class="horizon-possible">你的 kumo-ui 克隆（40/40 组件）和 MIUIX 探索证明你能用 subagent 编排驱动大型组件库构建。下一阶段：把 Claude 指向任意一个设计系统 URL 或 Figma 文件，得到一份完整测试、带文档的 Next.js 实现——含视觉回归测试、可访问性审计、每个组件单独的 CLAUDE.md——全部由并行 agent 反复对比截图，迭代到像素级吻合。</div>
+        <div class="horizon-tip"><strong>怎么开始：</strong>用 Agent 工具搭配 mcp__figma + chrome-devtools MCP，跑一条 brainstorm → spec → plan → 并行实现 → 视觉 diff 的循环，每个组件由专属 subagent 拥有，迭代到截图与源稿吻合。</div>
+        <div class="pattern-prompt"><div class="prompt-label">粘贴到 Claude Code：</div><code>我想把 [目标设计系统 URL 或 Figma 文件] 克隆为一个生产级的 Next.js + Tailwind 组件库。自主执行：(1) 抓取/提取完整组件清单存为 components.md；(2) 生成 spec.md，列出每个组件的 API/props/状态；(3) 用 demo 路由搭建 Next.js 应用骨架；(4) 按每批 5 个并行启动 subagent，每个组件一个——subagent 必须实现、用 chrome-devtools MCP 截图、与源稿 diff、迭代到视觉匹配 >95%；(5) 生成每个组件的 CLAUDE.md 与项目根 README；(6) 跑可访问性与 TypeScript 检查，修掉所有报错；(7) 按逻辑分块提交，使用中文 commit message。不要问我澄清问题——做合理默认并把它们记录下来。每完成 5 个组件汇报一次进度。</code><button class="copy-btn" onclick="copyText(this)">复制</button></div>
+      </div>
+    </div>
+
+    <div class="fun-ending">
+      <div class="fun-headline">「Claude 编了一条假的 /cwd 命令，被用户拆穿后只得乖乖收回」</div>
+      <div class="fun-detail">在一次关于切换工作目录和退出 Claude Code 的会话里，Claude 在用户质疑前就一脸笃定地虚构了一个并不存在的 slash 命令，最后只能自我纠正。</div>
+    </div>
+
+  </div>
+  <script>
+    function copyText(btn) {
+      const code = btn.previousElementSibling;
+      navigator.clipboard.writeText(code.textContent).then(() => {
+        btn.textContent = '已复制!';
+        setTimeout(() => { btn.textContent = '复制'; }, 2000);
+      });
+    }
+    function copyCmdItem(idx) {
+      const checkbox = document.getElementById('cmd-' + idx);
+      if (checkbox) {
+        const text = checkbox.dataset.text;
+        navigator.clipboard.writeText(text).then(() => {
+          const btn = checkbox.nextElementSibling.querySelector('.copy-btn');
+          if (btn) { btn.textContent = '已复制!'; setTimeout(() => { btn.textContent = '复制'; }, 2000); }
+        });
+      }
+    }
+    function copyAllCheckedClaudeMd() {
+      const checkboxes = document.querySelectorAll('.cmd-checkbox:checked');
+      const texts = [];
+      checkboxes.forEach(cb => {
+        if (cb.dataset.text) { texts.push(cb.dataset.text); }
+      });
+      const combined = texts.join('\n\n');
+      const btn = document.querySelector('.copy-all-btn');
+      if (btn) {
+        navigator.clipboard.writeText(combined).then(() => {
+          btn.textContent = '已复制 ' + texts.length + ' 项！';
+          btn.classList.add('copied');
+          setTimeout(() => { btn.textContent = '复制全部勾选项'; btn.classList.remove('copied'); }, 2000);
+        });
+      }
+    }
+  </script>
+</body>
+</html>
