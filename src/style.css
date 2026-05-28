@@ -406,6 +406,11 @@ html, body {
     /* 让每一行的基线节奏一致 */
     display: flex;
     flex-direction: column;
+    /* 关键：让每个 <li> 在交叉轴（水平方向）只占内容宽度，
+       而不是默认的 stretch 撑满整行。
+       这样右侧空白处不再属于 li 的命中区域，
+       hover/磁吸/缩略图 等交互只会在"编号 + 文字 + 箭头"这块真实内容上触发。 */
+    align-items: flex-start;
 }
 
 /* @property 注册：让 CSS 变量可以被 transition 平滑插值
