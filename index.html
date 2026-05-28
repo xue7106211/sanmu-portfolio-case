@@ -16,6 +16,20 @@
     <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
     <!-- 引入 Paper.js（CDN） -->
     <script src="https://cdn.jsdelivr.net/npm/paper@0.12.18/dist/paper-full.min.js"></script>
+    <!-- 引入 GSAP 核心（CDN）。GSAP 会把 gsap 对象挂到 window 上，
+         module 脚本里可以直接使用全局 gsap，无需 import。
+         注意：GSAP 必须在使用它的脚本之前加载，所以放在 main.js 之前。 -->
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+    <!-- 引入 ScrollTrigger 插件（GSAP 3 起免费）。
+         ScrollTrigger 会把同名对象挂到 window 上，main.js 里需要用
+         gsap.registerPlugin(ScrollTrigger) 注册一次后才能使用。 -->
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+    <!-- 引入 ScrambleTextPlugin（GSAP 自有 CDN）。
+         注意：原 Club 插件 ScrambleTextPlugin 虽然 2025 起免费授权，
+         但发行渠道仍是 GreenSock 自己。jsdelivr 上的公开 npm `gsap` 包里
+         没有这个插件文件（404）。开发期可用官方提供的 `gsap-trial` 包试用，
+         生产环境需要从 https://gsap.com 注册账号后用私有 npm 包替换。 -->
+    <script src="https://cdn.jsdelivr.net/npm/gsap-trial@3.12.5/dist/ScrambleTextPlugin.min.js"></script>
 </head>
 
 <body>
@@ -84,13 +98,18 @@
             <p class="works__label">Selected works</p>
             <!-- 每个 li 通过 data-thumb 携带缩略图 URL；JS 在 hover 时把它换到浮动 thumb 容器里 -->
             <ol class="works__list">
-                <li class="works__item" data-bigdot="true" data-thumb="https://picsum.photos/id/1015/600/400">Recongroup</li>
-                <li class="works__item" data-bigdot="true" data-thumb="https://picsum.photos/id/1018/600/400">Glassland</li>
+                <li class="works__item" data-bigdot="true" data-thumb="https://picsum.photos/id/1015/600/400">Recongroup
+                </li>
+                <li class="works__item" data-bigdot="true" data-thumb="https://picsum.photos/id/1018/600/400">Glassland
+                </li>
                 <li class="works__item" data-bigdot="true" data-thumb="https://picsum.photos/id/1043/600/400">PEFC</li>
-                <li class="works__item" data-bigdot="true" data-thumb="https://picsum.photos/id/1069/600/400">Biosphere Lab Lungau</li>
+                <li class="works__item" data-bigdot="true" data-thumb="https://picsum.photos/id/1069/600/400">Biosphere
+                    Lab Lungau</li>
                 <li class="works__item" data-bigdot="true" data-thumb="https://picsum.photos/id/1074/600/400">ZIID</li>
-                <li class="works__item" data-bigdot="true" data-thumb="https://picsum.photos/id/110/600/400">Hotel Gambswirt</li>
-                <li class="works__item" data-bigdot="true" data-thumb="https://picsum.photos/id/119/600/400">More works</li>
+                <li class="works__item" data-bigdot="true" data-thumb="https://picsum.photos/id/110/600/400">Hotel
+                    Gambswirt</li>
+                <li class="works__item" data-bigdot="true" data-thumb="https://picsum.photos/id/119/600/400">More works
+                </li>
             </ol>
 
             <!-- 浮动缩略图容器：position: fixed，跟随鼠标移动；

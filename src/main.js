@@ -4,6 +4,43 @@
 // // 1. 将 Paper.js 绑定到指定 canvas
 // paper.setup('myCanvas');
 
+
+/* -------------------------------------------------------------------------- */
+/* GSAP 初始化                                                                  */
+/* -------------------------------------------------------------------------- */
+// GSAP 与 ScrollTrigger 都是通过 CDN 在 index.html 里以全局脚本的方式加载，
+// 所以这里直接使用 window 上的 `gsap` / `ScrollTrigger`，不需要 import。
+//
+// 关键概念：
+//   - gsap.to(target, vars)       → 从当前状态补间到 vars 描述的状态
+//   - gsap.from(target, vars)     → 从 vars 描述的状态补间到当前状态
+//   - gsap.fromTo(target, a, b)   → 显式指定起止状态
+//   - gsap.timeline()             → 时间轴，串联多个补间
+//   - ScrollTrigger               → 滚动驱动动画的插件，需要先 registerPlugin
+//
+// registerPlugin 必须在使用任何 ScrollTrigger 功能之前调用一次；
+// 多次调用是安全的（GSAP 内部去重），所以放在文件最顶部最稳。
+//
+// 防御：ScrambleTextPlugin 走的是 GSAP 自己的 CDN（gsap-trial / 私有 npm），
+// 万一 CDN 抽风导致脚本未加载，window.ScrambleTextPlugin 会是 undefined。
+// 直接传给 registerPlugin 不会报错，但传给 registerPlugin 之后再写
+// `scrambleText:` 会静默失效；这里用短路读法防止 ReferenceError 把
+// 整个 main.js 拉胯（鼠标指针、聚光灯等后续代码都依赖这个文件能跑完）。
+gsap.registerPlugin(
+    ScrollTrigger,
+    typeof ScrambleTextPlugin !== 'undefined' ? ScrambleTextPlugin : null
+);
+
+// 冒烟测试：让 .hero__greeting 在加载时从下方淡入。
+// 仅用于验证 GSAP 是否成功引入，确认无误后可以删除这段。
+gsap.from('.hero__greeting', {
+    y: 20,
+    opacity: 0,
+    duration: 0.8,
+    ease: 'power2.out',
+});
+
+
 // // 2. 简单示例：在画布中央绘制一个圆，验证 Paper.js 是否正常工作
 // const center = paper.view.center;
 // const circle = new paper.Path.Circle({
@@ -319,25 +356,23 @@ if ($worksContainer.length && $magnetItems.length) {
 
 
 /* -------------------------------------------------------------------------- */
-/* Hero 标题：打字机 + 字符扰动 + 打错字 + 光标                                  */
+/* Hero 标题：字符扰动 → 单向揭示（纯 GSAP / ScrambleTextPlugin）                */
 /* -------------------------------------------------------------------------- */
-// 五态状态机：
-//   pending → scrambling → ┬─ locked                  （顺利写出）
-//                          └─ error → backspacing → locked   （打错回退后写出）
+// 设计：
+//   1) 把 .hero__title 的文本拆成 N 个 <span class="char">，每个 span 起始
+//      内容是空字符串。
+//   2) 对每个 span 跑一个 gsap.to(scrambleText: ...) 动画 —— 这是 GSAP
+//      ScrambleTextPlugin 的核心 API：把元素文本以"随机符号刷新 → 真实字符
+//      落定"的方式补间过去。
+//   3) 用 gsap.timeline() 把这 N 个 tween 按 "<+=offset" 的方式串起来，
+//      实现"前一个字开始 offset 秒后下一个字也开始" —— 等价于过去手写的
+//      顺序时间轴，但完全声明式。
+//   4) 光标跟随：每个 tween 在 onStart 时把 .char--active 挂到当前 span，
+//      onComplete 时移除；不再需要每帧扫描"最左侧活跃字符"。
 //
-// 时间轴策略：
-//   采用"顺序时间轴"——前一个字符的 lockAt 加上 PER_CHAR_DELAY 才是下一个字符
-//   的 startAt。这样同一时间至多只有一个字符在 scrambling/error/backspacing
-//   状态，光标位置才能"始终在当前正在打的字尾部"。
-//
-// 时间锚点（按状态机分支）：
-//   非打错：startAt → scrambleEndAt(=lockAt) → 进入 locked
-//   打错  ：startAt → scrambleEndAt → errorEndAt → backspaceEndAt(=lockAt) → locked
-//
-// 光标实现：
-//   在最左侧非 pending / 非 locked 字符上挂 .char--active 类，CSS 用 ::after
-//   绘制一个闪烁的 ▊。光标"自动跟随"——一旦活跃字符变更，前一帧的 active 移
-//   除、当前帧的 active 添加。
+// 为什么用单字符 tween 而不是整段一条 scrambleText：
+//   ScrambleTextPlugin 默认会把整段文本一次性接管，扰动时整行都在抖；
+//   要的是"已落定的字保持稳定、只有当前字在跳"，所以必须按字符切。
 
 const $heroTitle = $('.hero__title');
 
@@ -345,162 +380,103 @@ if ($heroTitle.length) {
     const titleEl = $heroTitle[0];
     const finalText = titleEl.textContent;
 
-    // 扰动符号池
-    const SCRAMBLE_POOL = '!<>-_\\/[]{}—=+*^?#$%&@'.split('');
+    // 自定义扰动符号池。ScrambleTextPlugin 的 chars 参数支持：
+    //   - 'upperCase' / 'lowerCase' / 'upperAndLowerCase'：内置池
+    //   - 任意字符串：用作随机字符池（这里就是这种用法）
+    const SCRAMBLE_CHARS = '!<>-_\\/[]{}—=+*^?#$%&@';
 
-    // ---- 时间参数（顺序打字，前后字符不重叠） ----
-    const PER_CHAR_DELAY = 50;       // 字间停顿
-    const SCRAMBLE_DURATION = 130;   // 每个字扰动时长
-    const ERROR_DURATION = 120;      // 错字停留时长
-    const BACKSPACE_DURATION = 70;   // 回退（空白）时长
-    const SCRAMBLE_INTERVAL = 30;    // 扰动符号刷新频率
+    // 每个字符的扰动 → 揭示总时长（秒）
+    const CHAR_DURATION = 0.18;
+    // 相邻字符的开始间隔（秒）；小于 CHAR_DURATION 时会出现"上一个字还没落定，
+    // 下一个字已经在扰动"的重叠感。要严格顺序，把它设成 >= CHAR_DURATION。
+    const CHAR_OFFSET = 0.05;
 
-    // ---- 打错字参数 ----
-    const TYPO_PROBABILITY = 0.2;    // 每个候选字符 20% 概率打错
-    const TYPO_MIN_GAP = 3;          // 两次打错至少间隔 3 个字符，避免连续打错
-
-    // 根据正确字符挑一个"看起来像打错"的字符（同大小写的随机字母）
-    function pickWrongChar(correct) {
-        const lower = 'abcdefghijklmnopqrstuvwxyz';
-        const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-        let pool;
-        if (/[a-z]/.test(correct)) pool = lower;
-        else if (/[A-Z]/.test(correct)) pool = upper;
-        // 非字母（如逗号、句号）兜底为随机小写字母
-        else return lower[Math.floor(Math.random() * lower.length)];
-        // 防止抽到原字符；safety 计数避免极端情况下死循环
-        let pick = correct;
-        let safety = 0;
-        while (pick === correct && safety++ < 10) {
-            pick = pool[Math.floor(Math.random() * pool.length)];
-        }
-        return pick;
-    }
-
+    // ---- 1. 拆字 ----
+    // 关键：先清空再 append，否则原文本会和新生成的 span 同时存在。
     titleEl.textContent = '';
-
-    const chars = [];
     const frag = document.createDocumentFragment();
-
-    // 顺序时间轴：累加每个字符的占用时长，确保前后不重叠
-    let timeline = 0;
-    let charsSinceTypo = TYPO_MIN_GAP; // 让首字符即可能打错
-
+    const spans = [];
     [...finalText].forEach((ch) => {
         const span = document.createElement('span');
         const isSpace = ch === ' ';
-        span.className = isSpace ? 'char char--space char--pending' : 'char char--pending';
+        // 复用 CSS 已有类名（.char / .char--space / .char--locked）
+        span.className = isSpace ? 'char char--space' : 'char';
+        // 起始为空 —— ScrambleTextPlugin 会从这个空状态补间到 finalChar
         span.textContent = '';
+        // 把最终字符存到 dataset，下面 tween 时回读
+        span.dataset.final = ch;
         frag.appendChild(span);
-
-        const startAt = timeline;
-        const scrambleEndAt = startAt + SCRAMBLE_DURATION;
-
-        // 仅对字母字符做打错判断（标点保持原样，避免出现"句号 → 字母"的违和感）
-        const canTypo = !isSpace && /[a-zA-Z]/.test(ch) && charsSinceTypo >= TYPO_MIN_GAP;
-        const willTypo = canTypo && Math.random() < TYPO_PROBABILITY;
-
-        const data = {
-            el: span,
-            finalChar: ch,
-            isSpace,
-            state: 'pending',
-            startAt,
-            scrambleEndAt,
-            willTypo,
-        };
-
-        if (willTypo) {
-            data.wrongChar = pickWrongChar(ch);
-            data.errorEndAt = scrambleEndAt + ERROR_DURATION;
-            data.backspaceEndAt = data.errorEndAt + BACKSPACE_DURATION;
-            data.lockAt = data.backspaceEndAt;
-            charsSinceTypo = 0;
-        } else {
-            data.lockAt = scrambleEndAt;
-            charsSinceTypo++;
-        }
-
-        chars.push(data);
-        // 下一字符从当前字符 lockAt + 字间间距 开始
-        timeline = data.lockAt + PER_CHAR_DELAY;
+        spans.push(span);
     });
     titleEl.appendChild(frag);
 
-    const startTime = performance.now();
-    let lastScrambleTime = 0;
-    let prevActiveChar = null; // 缓存活跃字符，仅在变化时更新 .char--active
+    // ---- 2. 用 timeline 串联每个字符的扰动 tween ----
+    // 用 onComplete 默认结束的 timeline；不显式指定 paused，所以创建即播放。
+    const tl = gsap.timeline();
 
-    function tick(now) {
-        const elapsed = now - startTime;
-        const shouldScramble = now - lastScrambleTime >= SCRAMBLE_INTERVAL;
-        if (shouldScramble) lastScrambleTime = now;
+    spans.forEach((span, i) => {
+        const finalChar = span.dataset.final;
+        const isSpace = finalChar === ' ';
 
-        let allLocked = true;
-        let activeChar = null;
-
-        chars.forEach((c) => {
-            if (c.state === 'locked') return;
-            allLocked = false;
-
-            // ---- 状态转移（按状态机顺序串联，单帧内可级联多次以兜住掉帧） ----
-            // pending → scrambling
-            if (c.state === 'pending' && elapsed >= c.startAt) {
-                c.el.classList.remove('char--pending');
-                c.state = 'scrambling';
-            }
-            // scrambling → error / locked
-            if (c.state === 'scrambling' && elapsed >= c.scrambleEndAt) {
-                if (c.willTypo) {
-                    c.el.classList.add('char--error');
-                    c.el.textContent = c.wrongChar;
-                    c.state = 'error';
-                } else {
-                    c.el.classList.add('char--locked');
-                    c.el.textContent = c.finalChar;
-                    c.state = 'locked';
-                    return;
-                }
-            }
-            // error → backspacing：把 textContent 清空，宽度归零 = "删除字符"
-            if (c.state === 'error' && elapsed >= c.errorEndAt) {
-                c.el.classList.remove('char--error');
-                c.el.classList.add('char--backspacing');
-                c.el.textContent = '';
-                c.state = 'backspacing';
-            }
-            // backspacing → locked
-            if (c.state === 'backspacing' && elapsed >= c.backspaceEndAt) {
-                c.el.classList.remove('char--backspacing');
-                c.el.classList.add('char--locked');
-                c.el.textContent = c.finalChar;
-                c.state = 'locked';
-                return;
-            }
-
-            // ---- 扰动期：节流刷新随机符号 ----
-            if (c.state === 'scrambling' && shouldScramble) {
-                c.el.textContent = c.isSpace
-                    ? c.finalChar
-                    : SCRAMBLE_POOL[Math.floor(Math.random() * SCRAMBLE_POOL.length)];
-            }
-
-            // ---- 标记最左侧"活跃"字符（即当前光标所在字符） ----
-            // 顺序时间轴下，活跃字符任意时刻最多一个
-            if (!activeChar && c.state !== 'pending') {
-                activeChar = c;
-            }
-        });
-
-        // ---- 光标跟随：仅在活跃字符变更时增删 .char--active，避免每帧抖动 ----
-        if (activeChar !== prevActiveChar) {
-            if (prevActiveChar) prevActiveChar.el.classList.remove('char--active');
-            if (activeChar) activeChar.el.classList.add('char--active');
-            prevActiveChar = activeChar;
+        // 空格直接 set 一下就好，没必要走扰动 —— 省一次 tween，节奏也更干脆
+        if (isSpace) {
+            tl.set(span, {
+                textContent: finalChar,
+                onStart: () => addCaret(span),
+                onComplete: () => removeCaret(span),
+            }, i === 0 ? 0 : `<+=${CHAR_OFFSET}`);
+            return;
         }
 
-        if (!allLocked) requestAnimationFrame(tick);
-    }
+        tl.to(
+            span,
+            {
+                duration: CHAR_DURATION,
+                // ScrambleTextPlugin 的 vars：
+                //   text         → 揭示完成后的最终文本
+                //   chars        → 扰动字符池
+                //   revealDelay  → 多久后开始按位揭示（0 = 全程都在扰动直到结尾）
+                //   speed        → 扰动符刷新速率（0~1，越大越快）
+                //   tweenLength  → 是否在过渡中改变文本长度（false 保持目标长度）
+                scrambleText: {
+                    text: finalChar,
+                    chars: SCRAMBLE_CHARS,
+                    revealDelay: 0,
+                    speed: 0.8,
+                    tweenLength: false,
+                },
+                ease: 'none',
+                onStart: () => {
+                    addCaret(span);
+                    // 揭示中可视化为"扰动中"，CSS 里 .char 默认就是品牌绿
+                    span.classList.remove('char--locked');
+                },
+                onComplete: () => {
+                    removeCaret(span);
+                    span.classList.add('char--locked');
+                },
+            },
+            // 第一个字符放在 0；后续字符相对前一个补间的开始时间偏移 CHAR_OFFSET。
+            // GSAP 位置语法：
+            //   "<"        → 上一个动画的开始时刻
+            //   "<+=0.05"  → 上一个动画开始后 0.05s
+            //   ">"        → 上一个动画的结束时刻
+            //   "+=0.05"   → 当前 timeline 末尾再延后 0.05s
+            i === 0 ? 0 : `<+=${CHAR_OFFSET}`
+        );
+    });
 
-    requestAnimationFrame(tick);
+    // ---- 3. 光标工具函数 ----
+    // 与原实现一致：CSS 里 .char--active::after 画一个闪烁的 ▊。
+    // 这里维护一个全局变量，避免遗漏 remove 导致同时多个光标。
+    let activeSpan = null;
+    function addCaret(span) {
+        if (activeSpan && activeSpan !== span) activeSpan.classList.remove('char--active');
+        activeSpan = span;
+        span.classList.add('char--active');
+    }
+    function removeCaret(span) {
+        span.classList.remove('char--active');
+        if (activeSpan === span) activeSpan = null;
+    }
 }
