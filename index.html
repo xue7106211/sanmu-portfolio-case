@@ -46,8 +46,11 @@
                 <span class="hero__title">I'm Sandra, frontend developer and designer.</span>
             </div>
             <div class="media">
-                <div class="portrait">
+                <div class="portrait portrait--front">
                     <img src="https://picsum.photos/id/64/1040/800" alt="Sandra portrait">
+                </div>
+                <div class="portrait portrait--secondary">
+                    <img src="https://picsum.photos/id/1027/1040/800" alt="Portrait of a woman">
                 </div>
                 <div class="circle-text" data-bigdot="true">
                     <!-- 用 SVG textPath 让文字沿圆形路径排列；定义一个不可见的圆当轨道 -->
@@ -64,8 +67,38 @@
                 </div>
             </div>
         </div>
-        <div></div>
-        <div></div>
+
+        <!-- =================================================================
+             第二屏：Selected works
+             结构：
+               .works
+                 ├─ .works__label  ── 小标签 "Selected works"
+                 └─ .works__list   ── ol 列表，li 内包含编号 + 名称
+             说明：
+               - 用 <ol> 保留列表语义，编号靠 ::before 绘制（"01 /"），
+                 这样 HTML 里就只写名称，结构干净；
+               - 也可以直接写在 li 里，这里选择 ::before + counter 的方式，
+                 既保留了无障碍语义（数字会被读屏读出），也方便统一改样式。
+             ================================================================= -->
+        <section class="works">
+            <p class="works__label">Selected works</p>
+            <!-- 每个 li 通过 data-thumb 携带缩略图 URL；JS 在 hover 时把它换到浮动 thumb 容器里 -->
+            <ol class="works__list">
+                <li class="works__item" data-bigdot="true" data-thumb="https://picsum.photos/id/1015/600/400">Recongroup</li>
+                <li class="works__item" data-bigdot="true" data-thumb="https://picsum.photos/id/1018/600/400">Glassland</li>
+                <li class="works__item" data-bigdot="true" data-thumb="https://picsum.photos/id/1043/600/400">PEFC</li>
+                <li class="works__item" data-bigdot="true" data-thumb="https://picsum.photos/id/1069/600/400">Biosphere Lab Lungau</li>
+                <li class="works__item" data-bigdot="true" data-thumb="https://picsum.photos/id/1074/600/400">ZIID</li>
+                <li class="works__item" data-bigdot="true" data-thumb="https://picsum.photos/id/110/600/400">Hotel Gambswirt</li>
+                <li class="works__item" data-bigdot="true" data-thumb="https://picsum.photos/id/119/600/400">More works</li>
+            </ol>
+
+            <!-- 浮动缩略图容器：position: fixed，跟随鼠标移动；
+                 默认 opacity: 0 + pointer-events: none，不会拦截下方元素的鼠标事件 -->
+            <div class="works__thumb" aria-hidden="true">
+                <img class="works__thumb-img" src="" alt="">
+            </div>
+        </section>
     </div>
 
 

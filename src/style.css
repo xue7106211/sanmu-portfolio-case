@@ -286,6 +286,8 @@ html, body {
     background: #d9d9d9;
     /* 让内部 img 不溢出，同时也兼容尚未加载的占位状态 */
     overflow: hidden;
+    position: relative;
+    z-index: 2;
 }
 
 /* 内层 <img> 撑满占位盒子，超出部分按比例裁切 */
@@ -294,6 +296,46 @@ html, body {
     height: 100%;
     object-fit: cover;
     display: block;
+}
+
+/* 第二张人像：叠放在第一张后方，错位露出一角 */
+.portrait--secondary {
+    position: absolute;
+    left: 32px;
+    top: 32px;
+    z-index: 1;
+}
+
+/* ---- 鼠标聚光灯：在前景图上"挖"一个柔和透明圆，露出后方图片 ----
+   思路：
+   1) 用 CSS 变量 --mx / --my 表示鼠标在前景图内的相对坐标（px）。
+   2) 用 --r 控制圆斑半径（px），鼠标进入/离开时通过 JS 把它从 0 → 目标值
+      做 lerp 过渡，避免硬切。
+   3) mask 用 radial-gradient：圆心处完全透明（被挖掉），向外用一段过渡带
+      （60% → 100%）柔和过渡到完全可见，得到丝滑的边缘。
+   4) -webkit-mask-* 是 Safari/旧 Chromium 的兼容写法，与标准属性同时写。
+   ---------------------------------------------------------- */
+.portrait--front {
+    --mx: 50%;
+    --my: 50%;
+    --r: 0px;
+    /* black = 保留像素，transparent = 挖掉。中心 transparent，外圈 black，
+       中间一段过渡带让边缘柔和；这里把过渡带拉到 ~70% 宽度，搭配 JS 的慢 lerp
+       一起，得到更柔、更有"光晕"质感的边缘 */
+    -webkit-mask-image: radial-gradient(
+        circle at var(--mx) var(--my),
+        transparent 0,
+        transparent calc(var(--r) * 0.3),
+        black var(--r)
+    );
+    mask-image: radial-gradient(
+        circle at var(--mx) var(--my),
+        transparent 0,
+        transparent calc(var(--r) * 0.3),
+        black var(--r)
+    );
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
 }
 
 /* "旋转点"（圆形文字 GO CHECK OUT MY PROJECTS） */
@@ -325,4 +367,225 @@ html, body {
 @keyframes spin {
     from { transform: rotate(0deg); }
     to   { transform: rotate(360deg); }
+}
+
+
+/* -------------------------------------------------------------------------- */
+/* 第二屏：Selected works                                                      */
+/* 结构：                                                                      */
+/*   .works                                                                    */
+/*     ├─ .works__label  ── "Selected works" 小标签                            */
+/*     └─ .works__list   ── <ol>，每个 <li> = 一个作品                         */
+/* 设计要点：                                                                  */
+/*   - 编号 "01 /" 用 CSS counter + ::before 绘制，HTML 里只写名称，干净；     */
+/*   - 编号字号小、颜色淡，与作品名形成强对比（小数字 + 大字标题）；             */
+/*   - 作品名走超大、纤细字重，line-height 收紧，呼应 hero 的视觉节奏；         */
+/*   - 顶部留出大量上边距，让这屏与 hero 区域有呼吸感。                          */
+/* -------------------------------------------------------------------------- */
+.works {
+    /* 与上方 .info-header 拉开距离，营造分屏感 */
+    margin-top: 160px;
+    /* 初始化 counter，供下方 li::before 使用 */
+    counter-reset: works-counter;
+}
+
+/* 小标签 "Selected works" */
+.works__label {
+    margin: 0 0 56px 0;
+    font-size: 14px;
+    font-weight: 400;
+    color: #111;
+    letter-spacing: 0.01em;
+}
+
+/* 列表容器：去掉默认的项目符号和内边距 */
+.works__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    /* 让每一行的基线节奏一致 */
+    display: flex;
+    flex-direction: column;
+}
+
+/* @property 注册：让 CSS 变量可以被 transition 平滑插值
+   未注册的变量类型是 <*>（字符串），CSS 不知道怎么"插值"它；
+   注册成 <length> 后浏览器会把它当数值，于是 transition 就能生效。 */
+@property --hover-x {
+    syntax: '<length>';
+    inherits: false;
+    initial-value: 0px;
+}
+
+/* 单个作品行 */
+.works__item {
+    /* 编号与名称水平排列，编号居前、上对齐到名称的视觉中线 */
+    display: flex;
+    align-items: baseline;
+    gap: 24px;
+
+    /* 作品名样式：大字号、纤细字重、紧凑行高，呼应 hero 标题 */
+    font-size: clamp(48px, 7vw, 96px);
+    font-weight: 300;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    color: #111;
+
+    /* 行间留点透气空间,避免大字挤在一起 */
+    padding: 4px 0;
+
+    /* ---- 双变量驱动 transform ----
+       --magnet-x / --magnet-y：磁吸偏移（JS 用 rAF 实时写入，不需要 transition）
+       --hover-x：hover 偏移（由 :hover 状态切换，用 @property 注册后可被 transition）
+       两者通过 calc() 叠加到同一个 transform，互不干扰 */
+    --magnet-x: 0px;
+    --magnet-y: 0px;
+    --hover-x: 0px;
+    transform: translate(calc(var(--magnet-x) + var(--hover-x)), var(--magnet-y));
+
+    /* 注意：只 transition --hover-x 这个具体变量，不要 transition transform，
+       否则 rAF 每帧的磁吸更新会和 transition 抢节奏，产生拖沓感 */
+    transition: --hover-x 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+
+    position: relative;
+    cursor: none;
+}
+
+/* 鼠标悬停：通过切换 --hover-x 触发位移，由 @property + transition 平滑过渡 */
+.works__item:hover {
+    --hover-x: 16px;
+}
+
+/* 箭头图标 → 用 ::after 生成，默认隐藏（透明 + 缩小 + 左移），hover 时淡入 + 复位 */
+.works__item::after {
+    /* 用 Unicode 箭头，无需额外字体或图片 */
+    content: "→";
+    /* 让箭头跟在名称后面、参与 flex 布局 */
+    display: inline-block;
+    margin-left: 24px;
+
+    /* 默认隐藏状态：完全透明 + 略微缩小 + 略微左移（营造"从左滑入"的感觉） */
+    opacity: 0;
+    transform: translateX(-12px);
+
+    /* 与行的 transform 用同一条曲线，保持节奏一致 */
+    transition:
+        opacity 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+        transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* hover 时箭头淡入并归位 */
+.works__item:hover::after {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+/* 编号 "01 /" —— 通过 CSS counter 自动生成，两位数补零 */
+.works__item::before {
+    counter-increment: works-counter;
+    /* decimal-leading-zero 自动给个位数补 0：1 → 01、2 → 02 */
+    content: counter(works-counter, decimal-leading-zero) " /";
+
+    /* 编号字号、字重和颜色都比作品名"轻"，形成强对比 */
+    font-size: 13px;
+    font-weight: 400;
+    color: #999;
+    letter-spacing: 0.04em;
+
+    /* 让编号有固定宽度，所有行的作品名起点对齐 */
+    flex-shrink: 0;
+    min-width: 36px;
+    /* 微调垂直位置：让小编号大致落在大字号名称的"上中部" */
+    align-self: flex-start;
+    padding-top: 18px;
+}
+
+
+/* -------------------------------------------------------------------------- */
+/* 浮动缩略图：跟随鼠标的预览图                                                  */
+/* -------------------------------------------------------------------------- */
+/* 思路：
+   1) 容器固定定位（fixed），位置由 CSS 变量 --tx / --ty 控制；
+   2) JS 用 rAF + lerp 平滑更新 --tx / --ty，得到拖尾感；
+   3) 默认 opacity: 0 + pointer-events: none，不拦截鼠标，且离开时淡出；
+   4) 给定显眼但不抢戏的尺寸；transform: translate(-50%, -50%) 让图片中心对齐鼠标。 */
+.works__thumb {
+    /* CSS 变量初始位置（屏幕中心），避免页面加载时图片闪到 (0,0) */
+    --tx: 50vw;
+    --ty: 50vh;
+
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 320px;
+    height: 220px;
+    /* z-index 介于内容和自定义指针之间 */
+    z-index: 50;
+
+    /* 不拦截鼠标事件，避免触发 mouseleave 抖动 */
+    pointer-events: none;
+
+    /* 默认隐藏，hover 时由 .is-visible 类切换可见 */
+    opacity: 0;
+    transition: opacity 0.35s ease;
+
+    /* 用 translate3d 触发 GPU 合成；先按变量定位，再用 -50% 让图片中心对齐鼠标 */
+    transform: translate3d(var(--tx), var(--ty), 0) translate(-50%, -50%);
+    /* 提示浏览器 transform 会频繁变化 */
+    will-change: transform, opacity;
+
+    /* 轻微阴影增加层次 */
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18);
+    overflow: hidden;
+    background: #d9d9d9;
+}
+
+/* JS 在 hover 时给容器加 .is-visible 触发淡入 */
+.works__thumb.is-visible {
+    opacity: 1;
+}
+
+/* 图片填满容器，等比裁切 */
+.works__thumb-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+
+/* -------------------------------------------------------------------------- */
+/* Hero 标题：逐字淡入打字机效果                                                 */
+/* -------------------------------------------------------------------------- */
+/* 思路：
+   1) JS 把 .hero__title 的文字拆成 <span class="char">，空格保留为不可断行空白；
+   2) 每个 char 默认 opacity:0 + translateY 偏移，加上 .is-in 类后归位；
+   3) 错峰用 transition-delay：JS 给每个 span 写 inline style --i（索引），
+      CSS 用 calc(var(--i) * step) 算出延迟，HTML 干净、CSS 灵活。 */
+
+.hero__title .char {
+    /* 让每个字独立参与 transform，且空格不被合并 */
+    display: inline-block;
+    /* 默认隐藏：透明 + 略微下移 + 轻微放大，营造"浮现"感 */
+    opacity: 0;
+    transform: translateY(0.4em);
+    /* 用 CSS 变量 --i（由 JS 写入）+ 每个字的步长，算出错开的延迟 */
+    transition:
+        opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1) calc(var(--i, 0) * 0.04s),
+        transform 0.6s cubic-bezier(0.22, 1, 0.36, 1) calc(var(--i, 0) * 0.04s);
+    /* 让浏览器为这些频繁变化的属性预留合成层 */
+    will-change: opacity, transform;
+}
+
+/* 加上这个类时，所有字一起触发动画，但每个字的 transition-delay 不同，
+   形成"逐字浮现"的错峰节奏 */
+.hero__title.is-in .char {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* 空格也用 span 包裹时，保留宽度不被折叠 */
+.hero__title .char--space {
+    /* 让空格保留宽度，且不会因为 inline-block 被吃掉 */
+    white-space: pre;
 }

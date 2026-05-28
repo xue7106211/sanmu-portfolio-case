@@ -96,3 +96,267 @@ allElements.hover(() => {
     // 鼠标离开：恢复默认大小
     $pointer.removeClass('big');
 });
+
+
+/* -------------------------------------------------------------------------- */
+/* 人像聚光灯 —— 鼠标悬停在前景图上时，挖出一个柔和的圆，露出后方的第二张图        */
+/* -------------------------------------------------------------------------- */
+// 思路：
+// 1. CSS 已经在 .portrait--front 上用 radial-gradient 做了 mask，
+//    通过 --mx / --my / --r 三个 CSS 变量控制圆心与半径。
+// 2. JS 这里只负责更新这三个变量：
+//    - mousemove 时记录目标坐标 targetMX / targetMY
+//    - mouseenter 把目标半径设为 SPOT_RADIUS，mouseleave 设回 0
+// 3. 用 requestAnimationFrame + 线性插值（lerp）让 current 平滑追赶 target，
+//    所以鼠标快速移动或进出时，圆斑都不会"硬切"，整体丝滑。
+const $front = $('.portrait--front');
+
+if ($front.length) {
+    const frontEl = $front[0];
+
+    // 圆斑目标半径（鼠标在图上时）。可按需调整大小
+    const SPOT_RADIUS = 160;
+    // 拆成两个 lerp 系数：
+    // - 位置缓动很小 → 拖尾明显，鼠标快速移动时光斑像被"拽"着跟上来
+    // - 半径缓动稍大 → 聚光出现/消失更利落，不会让人感觉迟钝
+    const POS_EASING = 0.08;
+    const RADIUS_EASING = 0.18;
+
+    // 目标值（鼠标实际位置 + 期望半径）
+    let targetMX = 0;
+    let targetMY = 0;
+    let targetR = 0;
+
+    // 当前值（动画里平滑追赶 target 的那一份）
+    let curMX = 0;
+    let curMY = 0;
+    let curR = 0;
+
+    // 鼠标进入：把目标半径设为 SPOT_RADIUS；
+    // 注意：不再把 cur* 对齐到鼠标位置，保留"从远处滑入"的拖尾感
+    $front.on('mouseenter', (e) => {
+        const rect = frontEl.getBoundingClientRect();
+        targetMX = e.clientX - rect.left;
+        targetMY = e.clientY - rect.top;
+        targetR = SPOT_RADIUS;
+    });
+
+    // 鼠标移动：只更新目标坐标，真正的位移交给 rAF
+    $front.on('mousemove', (e) => {
+        const rect = frontEl.getBoundingClientRect();
+        targetMX = e.clientX - rect.left;
+        targetMY = e.clientY - rect.top;
+    });
+
+    // 鼠标离开：目标半径回到 0，圆斑会平滑收缩消失
+    $front.on('mouseleave', () => {
+        targetR = 0;
+    });
+
+    // 动画循环：lerp 平滑插值，写入 CSS 变量
+    function spotTick() {
+        curMX += (targetMX - curMX) * POS_EASING;
+        curMY += (targetMY - curMY) * POS_EASING;
+        curR += (targetR - curR) * RADIUS_EASING;
+
+        frontEl.style.setProperty('--mx', `${curMX}px`);
+        frontEl.style.setProperty('--my', `${curMY}px`);
+        frontEl.style.setProperty('--r', `${curR}px`);
+
+        requestAnimationFrame(spotTick);
+    }
+
+    requestAnimationFrame(spotTick);
+}
+
+
+/* -------------------------------------------------------------------------- */
+/* Works 列表：跟随鼠标的浮动缩略图                                             */
+/* -------------------------------------------------------------------------- */
+// 思路（与自定义指针完全同构，复用一套 rAF + lerp 模式）：
+// 1. mousemove 时记录鼠标真实坐标到 targetTX / targetTY
+// 2. mouseenter 切换图片 src 并加 .is-visible 类（淡入）
+// 3. mouseleave 移除 .is-visible 类（淡出）
+// 4. rAF 循环里把 currentTX/Y 平滑插值到 target，写入 CSS 变量 --tx / --ty
+// 5. transform 在 CSS 里用 translate3d(var(--tx), var(--ty), 0) translate(-50%, -50%)
+//    做到"图片中心跟随鼠标"，且走 GPU 合成路径
+
+const $thumb = $('.works__thumb');
+const $thumbImg = $('.works__thumb-img');
+const $worksItems = $('.works__item');
+
+if ($thumb.length && $worksItems.length) {
+    const thumbEl = $thumb[0];
+
+    // 缩略图缓动系数：略小一点更有"拖尾"感
+    const THUMB_EASING = 0.12;
+
+    // 目标坐标 / 当前坐标
+    let targetTX = window.innerWidth / 2;
+    let targetTY = window.innerHeight / 2;
+    let currentTX = targetTX;
+    let currentTY = targetTY;
+
+    // 在列表区域内统一监听 mousemove，比给每个 li 都绑定更省事
+    $worksItems.on('mousemove', (e) => {
+        targetTX = e.clientX;
+        targetTY = e.clientY;
+    });
+
+    // 鼠标进入某行：切换图片源 + 显示
+    $worksItems.on('mouseenter', function (e) {
+        const src = this.getAttribute('data-thumb');
+        if (src) {
+            // 仅当 src 改变时才更新，避免在同一行内移动反复重置图片
+            if ($thumbImg.attr('src') !== src) {
+                $thumbImg.attr('src', src);
+            }
+        }
+        // 立即把当前坐标对齐鼠标，避免从屏幕中心"飞"过来
+        targetTX = e.clientX;
+        targetTY = e.clientY;
+        $thumb.addClass('is-visible');
+    });
+
+    // 鼠标离开某行：淡出
+    $worksItems.on('mouseleave', () => {
+        $thumb.removeClass('is-visible');
+    });
+
+    // 动画循环：lerp 平滑插值，写入 CSS 变量
+    function thumbTick() {
+        currentTX += (targetTX - currentTX) * THUMB_EASING;
+        currentTY += (targetTY - currentTY) * THUMB_EASING;
+
+        // 直接写 CSS 变量，让 CSS 里的 transform 公式去合成最终位移
+        thumbEl.style.setProperty('--tx', `${currentTX}px`);
+        thumbEl.style.setProperty('--ty', `${currentTY}px`);
+
+        requestAnimationFrame(thumbTick);
+    }
+
+    requestAnimationFrame(thumbTick);
+}
+
+
+/* -------------------------------------------------------------------------- */
+/* Works 列表：磁吸 hover 效果                                                  */
+/* -------------------------------------------------------------------------- */
+// 思路：
+// 1. 监听 .works 容器的 mousemove，遍历每行 li 计算"鼠标到行中心"的距离
+// 2. 距离越近，行被"吸引"得越厉害；超过影响半径就归零
+// 3. 偏移方向 = 鼠标 - 行中心，再按距离衰减系数缩放
+// 4. 每行用一对 target / current 做 lerp 平滑（与项目其他动画同构）
+// 5. 写入 CSS 变量 --magnet-x / --magnet-y，由 CSS 里的 transform 公式合成位移
+
+const $worksContainer = $('.works');
+const $magnetItems = $('.works__item');
+
+if ($worksContainer.length && $magnetItems.length) {
+    // 影响半径：鼠标在行的"垂直距离"超过这个值就不再吸附（单位 px）
+    const INFLUENCE_RADIUS = 200;
+    // 最大偏移量（px）
+    const MAX_OFFSET = 10;
+    // 磁吸缓动系数：稍小一点更"粘"
+    const MAGNET_EASING = 0.18;
+
+    // 给每个 item 维护一份独立的 target / current 状态
+    const items = $magnetItems.toArray().map((el) => ({
+        el,
+        targetX: 0,
+        targetY: 0,
+        currentX: 0,
+        currentY: 0,
+    }));
+
+    // 容器范围内监听 mousemove
+    $worksContainer.on('mousemove', (e) => {
+        items.forEach((item) => {
+            const rect = item.el.getBoundingClientRect();
+            // 行中心点
+            const cx = rect.left + rect.width / 2;
+            const cy = rect.top + rect.height / 2;
+
+            // 鼠标到行中心的向量
+            const dx = e.clientX - cx;
+            const dy = e.clientY - cy;
+            // 用垂直距离做衰减判断（行很宽，水平方向几乎总在范围内，靠 dy 决定影响）
+            const dist = Math.abs(dy);
+
+            if (dist < INFLUENCE_RADIUS) {
+                // 距离越近，strength 越接近 1；超出范围 strength = 0
+                const strength = 1 - dist / INFLUENCE_RADIUS;
+                // 限幅，避免大字号下 dx 过大导致偏移夸张
+                item.targetX = Math.max(-MAX_OFFSET, Math.min(MAX_OFFSET, dx * 0.05)) * strength;
+                item.targetY = Math.max(-MAX_OFFSET, Math.min(MAX_OFFSET, dy * 0.05)) * strength;
+            } else {
+                item.targetX = 0;
+                item.targetY = 0;
+            }
+        });
+    });
+
+    // 鼠标离开整个列表区域时，所有行回正
+    $worksContainer.on('mouseleave', () => {
+        items.forEach((item) => {
+            item.targetX = 0;
+            item.targetY = 0;
+        });
+    });
+
+    // 动画循环：每帧 lerp 所有行，再写入 CSS 变量
+    function magnetTick() {
+        items.forEach((item) => {
+            item.currentX += (item.targetX - item.currentX) * MAGNET_EASING;
+            item.currentY += (item.targetY - item.currentY) * MAGNET_EASING;
+            item.el.style.setProperty('--magnet-x', `${item.currentX}px`);
+            item.el.style.setProperty('--magnet-y', `${item.currentY}px`);
+        });
+        requestAnimationFrame(magnetTick);
+    }
+    requestAnimationFrame(magnetTick);
+}
+
+
+/* -------------------------------------------------------------------------- */
+/* Hero 标题：逐字淡入打字机动画                                                 */
+/* -------------------------------------------------------------------------- */
+// 思路：
+// 1. 取出 .hero__title 的原始文本，按字符遍历
+// 2. 每个字符包成 <span class="char">，空格用 .char--space 标记保留宽度
+// 3. 用 inline style 写入 CSS 变量 --i（字符索引），CSS 据此算 transition-delay
+// 4. 下一个事件循环加 .is-in 类，触发所有 span 的 transition 同时启动，
+//    但每个 span 的 delay 不同，形成"错峰"出现的视觉效果
+// 5. 用 requestAnimationFrame 而不是 setTimeout(0) 确保浏览器已经渲染了初始状态，
+//    避免动画从"初始状态 + 已淡入"开始而看不到效果
+
+const $heroTitle = $('.hero__title');
+
+if ($heroTitle.length) {
+    const titleEl = $heroTitle[0];
+    const text = titleEl.textContent;
+
+    // 清空原文本后按字符重建
+    titleEl.textContent = '';
+
+    // 用 DocumentFragment 批量插入，减少回流
+    const frag = document.createDocumentFragment();
+    [...text].forEach((ch, i) => {
+        const span = document.createElement('span');
+        span.className = ch === ' ' ? 'char char--space' : 'char';
+        // 用 \u00A0（不间断空格）也行，但配合 .char--space 的 white-space: pre 更稳
+        span.textContent = ch;
+        // CSS 变量 --i 控制每个字的 transition-delay
+        span.style.setProperty('--i', i);
+        frag.appendChild(span);
+    });
+    titleEl.appendChild(frag);
+
+    // 关键：先让浏览器把"全部隐藏"的初始状态绘制出来，再加 .is-in 触发动画
+    // 双 rAF 是为了跨过同一帧的样式计算，确保 transition 能正确从 0 → 1 过渡
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            titleEl.classList.add('is-in');
+        });
+    });
+}
