@@ -6,6 +6,93 @@
     display: block;
 } */
 
+/* -------------------------------------------------------------------------- */
+/* 主题变量（CSS Custom Properties）                                            */
+/* -------------------------------------------------------------------------- */
+/*
+   设计：
+   - 把所有"会随主题变"的值集中在一处定义，组件里全部用 var(--xxx) 读取；
+   - 默认主题（modern）写在 :root，因为 :root 优先级最低又作用于全局；
+   - 切到 old-school 时，给 <body> 加 .theme-old 类，覆盖一份变量值；
+   - 子元素读 var(--xxx) 时会沿 DOM 树往上查最近的定义，所以
+     body 上的覆盖能影响整棵子树，无需到处改选择器。
+
+   为什么用变量而不是给每个组件写一套 .theme-old 选择器：
+   - 散落的硬编码颜色/字体多达十几处，逐一覆盖容易漏；
+   - 后续要再加 dark / 节日主题，只需新增一组变量，不用动组件代码。
+*/
+:root {
+    /* ---- 颜色 ---- */
+    --bg: #fff;
+    --fg: #111;
+    --fg-muted: #999;
+    --accent: #00ee38;
+    --accent-soft: rgba(0, 238, 56, 0.15);
+    /* 边框默认透明，old-school 下变实色 */
+    --border: transparent;
+    --border-strong: #111;
+
+    /* 反转/对比色：用于黑底白字徽章这类需要"主色反面"的元素 */
+    --on-strong-bg: #111;
+    --on-strong-fg: #fff;
+
+    /* ---- 字体 ---- */
+    --font-body: "Helvetica Neue", Inter, sans-serif;
+    --font-display: var(--font-body);
+
+    /* ---- 装饰开关（用 0/1 当布尔，可被 transition 平滑插值） ---- */
+    --decor-opacity: 0;
+    --paper-opacity: 0;
+
+    /* ---- 渐变 ---- */
+    --hero-gradient: none;
+
+    /* ---- 切换过渡时长（统一一处管） ---- */
+    --theme-duration: 0.6s;
+    --theme-ease: cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+/* old-school 主题：杂志/报刊/复古印刷物质感 */
+body.theme-old {
+    --bg: #f4ead5;
+    --fg: #2b1d12;
+    --fg-muted: #8a7558;
+    --accent: #c0392b;
+    --accent-soft: rgba(192, 57, 43, 0.15);
+    --border: #2b1d12;
+    --border-strong: #2b1d12;
+
+    --on-strong-bg: #2b1d12;
+    --on-strong-fg: #f4ead5;
+
+    --font-body: "DM Serif Text", "Times New Roman", Georgia, serif;
+    --font-display: "DM Serif Display", "Times New Roman", Georgia, serif;
+
+    --decor-opacity: 1;
+    --paper-opacity: 0.35;
+
+    /* 三段式渐变模拟印刷油墨色阶变化 */
+    --hero-gradient: linear-gradient(120deg, #c0392b 0%, #2b1d12 50%, #c0392b 100%);
+}
+
+/* 切换过程中临时挂载的全局过渡：
+   - JS 在 toggle 时先加 .theme-transitioning，700ms 后摘掉；
+   - 只过渡颜色/边框/不透明度等"安全"属性，避免和 rAF 动画的 transform 打架；
+   - 限定到 body 自身和容器内的"可视组件"，配合 :where() 降低选择器优先级。 */
+body.theme-transitioning,
+body.theme-transitioning *:not(.mousePointer):not(.preloader):not(.preloader *) {
+    transition:
+        background-color var(--theme-duration) var(--theme-ease),
+        color var(--theme-duration) var(--theme-ease),
+        border-color var(--theme-duration) var(--theme-ease),
+        outline-color var(--theme-duration) var(--theme-ease),
+        box-shadow var(--theme-duration) var(--theme-ease),
+        fill var(--theme-duration) var(--theme-ease),
+        stroke var(--theme-duration) var(--theme-ease),
+        opacity var(--theme-duration) var(--theme-ease);
+}
+
+
 /* 全局重置：让 html 与 body 占满整个视口，并清除浏览器默认外边距 */
 html, body {
     /* 清除默认外边距，避免页面四周出现白边 */
@@ -19,10 +106,10 @@ html, body {
     /* 允许内容垂直滚动，水平方向仍隐藏多余内容 */
     overflow-x: hidden;
     overflow-y: auto;
-    /* 全局字体：macOS 优先 Helvetica Neue，其他系统补底 Inter，最后回落通用 sans-serif */
-    font-family: "Helvetica Neue", Inter, sans-serif;
-    color: #111;
-    background: #fff;
+    /* 全局字体：从主题变量读取，old-school 主题会切换到衬线字体 */
+    font-family: var(--font-body);
+    color: var(--fg);
+    background: var(--bg);
 }
 
 /* 隐藏系统默认光标，改用自定义指针 */
@@ -34,7 +121,7 @@ html, body {
     /* 自定义鼠标指针：尺寸与外观 */
     height: 16px;
     width: 16px;
-    background: #00ee38;
+    background: var(--accent);
     border-radius: 999px;
 
     /* 固定定位，使用 transform 做位移，性能更好 */
@@ -119,7 +206,7 @@ html, body {
 /* 左上角的 "Portfolio" 文案 */
 .brand {
     font-size: 16px;
-    color: #111;
+    color: var(--fg);
 }
 
 /* 右上角圆形奖章 */
@@ -128,9 +215,9 @@ html, body {
     width: 64px;
     height: 64px;
     border-radius: 50%;
-    /* 黑底白字，模拟设计稿里的 "OFFICIAL DESIGN AWARDS" 徽章 */
-    background: #111;
-    color: #fff;
+    /* 主题主色块 + 反色文字（modern: 黑底白字 / old: 深褐底米色字） */
+    background: var(--on-strong-bg);
+    color: var(--on-strong-fg);
     font-size: 9px;
     text-align: center;
     /* 文字默认是块/行内布局，用 flex 居中更稳 */
@@ -190,7 +277,7 @@ html, body {
     align-items: center;
     gap: 8px;
     font-size: 11px;
-    color: #111;
+    color: var(--fg);
     line-height: 1.3;
     /* 让 label 表现得像可点击控件 */
     cursor: none;
@@ -203,7 +290,7 @@ html, body {
     width: 36px;
     height: 18px;
     border-radius: 999px;
-    background: #111;
+    background: var(--on-strong-bg);
     /* 默认与选中态之间的颜色过渡 */
     transition: background 0.25s ease;
     flex-shrink: 0;
@@ -217,7 +304,7 @@ html, body {
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    background: #fff;
+    background: var(--on-strong-fg);
     /* 起点：垂直居中，水平方向不偏移 */
     transform: translate(0, -50%);
     transition: transform 0.25s ease;
@@ -225,8 +312,8 @@ html, body {
 
 /* 选中态：兄弟选择器把状态映射到 label 上的样式 */
 .toggle__input:checked ~ .toggle .toggle__switch {
-    /* 老派模式：用品牌绿替换黑底，呼应自定义指针的颜色 */
-    background: #00ee38;
+    /* 老派模式：用主题强调色替换基色，呼应自定义指针的颜色 */
+    background: var(--accent);
 }
 .toggle__input:checked ~ .toggle .toggle__thumb {
     /* 滑块平移到右端：轨道宽 36 - 滑块 12 - 左右各 3 的内边距 = 18 */
@@ -235,7 +322,7 @@ html, body {
 
 /* 键盘聚焦时给轨道描边，照顾可访问性 */
 .toggle__input:focus-visible ~ .toggle .toggle__switch {
-    outline: 2px solid #00ee38;
+    outline: 2px solid var(--accent);
     outline-offset: 2px;
 }
 
@@ -283,7 +370,7 @@ html, body {
 .portrait {
     width: clamp(320px, 40vw, 520px);
     height: clamp(240px, 30vw, 400px);
-    background: #d9d9d9;
+    background: var(--fg-muted);
     /* 让内部 img 不溢出，同时也兼容尚未加载的占位状态 */
     overflow: hidden;
     position: relative;
@@ -394,7 +481,7 @@ html, body {
     margin: 0 0 56px 0;
     font-size: 14px;
     font-weight: 400;
-    color: #111;
+    color: var(--fg);
     letter-spacing: 0.01em;
 }
 
@@ -434,7 +521,7 @@ html, body {
     font-weight: 300;
     letter-spacing: -0.02em;
     line-height: 1.15;
-    color: #111;
+    color: var(--fg);
 
     /* 行间留点透气空间,避免大字挤在一起 */
     padding: 4px 0;
@@ -494,7 +581,7 @@ html, body {
     /* 编号字号、字重和颜色都比作品名"轻"，形成强对比 */
     font-size: 13px;
     font-weight: 400;
-    color: #999;
+    color: var(--fg-muted);
     letter-spacing: 0.04em;
 
     /* 让编号有固定宽度，所有行的作品名起点对齐 */
@@ -542,7 +629,7 @@ html, body {
     /* 轻微阴影增加层次 */
     box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18);
     overflow: hidden;
-    background: #d9d9d9;
+    background: var(--fg-muted);
 }
 
 /* JS 在 hover 时给容器加 .is-visible 触发淡入 */
@@ -570,8 +657,8 @@ html, body {
 
 .hero__title .char {
     display: inline-block;
-    /* 扰动中的字符用品牌绿，营造"码"在跳动的视觉信号 */
-    color: #00ee38;
+    /* 扰动中的字符用主题强调色，营造"码"在跳动的视觉信号 */
+    color: var(--accent);
     /* 颜色切换加过渡，让锁定瞬间有"收束"感而不是硬切 */
     transition: color 0.25s ease-out;
     /* 让 ::after 光标可以以这个 span 为定位锚点 */
@@ -585,9 +672,9 @@ html, body {
     display: none;
 }
 
-/* 已锁定字符：变回正文黑色 */
+/* 已锁定字符：变回正文色 */
 .hero__title .char--locked {
-    color: #111;
+    color: var(--fg);
 }
 
 /* 错字：用红色做强提示，模拟"打错字" */
@@ -658,7 +745,7 @@ html, body {
     margin: 0 0 96px 0;
     font-size: 14px;
     font-weight: 400;
-    color: #111;
+    color: var(--fg);
     letter-spacing: 0.01em;
 }
 
@@ -683,7 +770,7 @@ html, body {
     gap: 2px;
     font-size: 13px;
     line-height: 1.5;
-    color: #111;
+    color: var(--fg);
 }
 
 /* 名字行：与下方两条链接同字号，但稍微突出（设计稿里就是同一字号） */
@@ -694,7 +781,7 @@ html, body {
 
 /* 邮箱 / Linkedin 链接：默认黑字无下划线，hover 才显形 */
 .contact__link {
-    color: #111;
+    color: var(--fg);
     text-decoration: none;
     /* hover 颜色过渡，与项目其他交互节奏一致 */
     transition: color 0.25s ease;
@@ -706,7 +793,7 @@ html, body {
 }
 
 .contact__link:hover {
-    color: #00ee38;
+    color: var(--accent);
 }
 
 /* 右侧：副文案 */
@@ -715,7 +802,7 @@ html, body {
     text-align: right;
     font-size: 13px;
     line-height: 1.5;
-    color: #111;
+    color: var(--fg);
     /* 限制最大宽度，避免在超宽屏上一行过长 */
     max-width: 280px;
 }
@@ -729,7 +816,7 @@ html, body {
     display: inline-block;
     margin-left: 6px;
     font-size: 14px;
-    color: #111;
+    color: var(--fg);
     /* 用 line-height: 1 让字符紧贴基线，避免 × 在行框里偏上 */
     line-height: 1;
 }
@@ -743,11 +830,11 @@ html, body {
     gap: 24px;
 
     /* 底部分隔线 —— 用 border 替代独立的 <hr>，少写一层结构 */
-    border-bottom: 1px solid #111;
+    border-bottom: 1px solid var(--fg);
     padding-bottom: 12px;
 
     /* a 默认有下划线和蓝色，统一清掉 */
-    color: #111;
+    color: var(--fg);
     text-decoration: none;
 
     /* 自定义指针接管 */
@@ -776,12 +863,332 @@ html, body {
     transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* hover 整行：颜色切到品牌绿，箭头朝右上角"出发" */
+/* hover 整行：颜色切到主题强调色，箭头朝右上角"出发" */
 .contact__cta:hover {
-    color: #00ee38;
+    color: var(--accent);
 }
 
 .contact__cta:hover .contact__cta-arrow {
     /* 6px 右上偏移：x: +6, y: -6 */
     transform: translate(6px, -6px);
 }
+
+
+/* -------------------------------------------------------------------------- */
+/* 页面预加载动画（Preloader）                                                  */
+/* -------------------------------------------------------------------------- */
+/*
+   思路：
+   1) 两个全屏 div 上下叠加（前层黑、后层绿），盖住全部内容；
+   2) 加载完成时，给 .preloader 加 .is-done 类：
+      - 前层先上滑离场（translateY: 0 → -100%）露出后层；
+      - 后层延迟 0.15s 再上滑，做出"两道帘幕错位掀开"的视觉节奏；
+   3) 缓动曲线用 cubic-bezier(0.77, 0, 0.175, 1)（ease-in-out-quart）：
+      - 起手快、中段平、收尾柔，比 CSS 内置的 ease 更"灵动"；
+      - 这条曲线在前端动画里非常常用，俗称 "Power4 in-out"；
+   4) 整个动画结束后给 .preloader 加 .is-hidden，把它从渲染树里 display: none
+      移除，避免还占一层位（pointer-events 也会被切掉）。
+
+   关键点（容易踩的坑）：
+   - 两层都用 position: fixed + inset: 0，独立于文档流；
+   - z-index 一定要高于 .mousePointer（9999），否则自定义指针会"穿透"出来；
+   - transform 比 top/left 更适合做位移动画——只触发合成，不触发重排；
+   - transition-delay 是错位的关键，不要混用 animation-delay（那是 keyframes 的事）；
+   - 加载条/百分比文字也要先写好初始态，否则首帧会看到默认 0 闪一下。
+*/
+
+.preloader {
+    /* 全屏覆盖；z-index 高于自定义指针 (.mousePointer = 9999)，避免穿透 */
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    /* 让两层 .preloader__layer 用绝对定位叠加在内部 */
+    overflow: hidden;
+    /* 加载阶段不需要响应任何鼠标事件 */
+    pointer-events: none;
+}
+
+/* 单层帘幕：100% 全屏，上滑离场 */
+.preloader__layer {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    /* 起始位置：在视口正中（translateY(0)） */
+    transform: translateY(0);
+    /* 缓动曲线：cubic-bezier(0.77, 0, 0.175, 1) = ease-in-out-quart
+       —— 起手有冲劲、中段平稳、收尾柔和，比内置 ease 更"灵动" */
+    transition: transform 1s cubic-bezier(0.77, 0, 0.175, 1);
+    will-change: transform;
+}
+
+/* 前层（视觉上层）：纯黑 + 居中的百分比计数 */
+.preloader__layer--first {
+    background: #111;
+    color: #fff;
+    /* 用 flex 把 .preloader__count 钉在中央 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* 前层的 transition-delay = 0：第一道帘幕先掀开 */
+    transition-delay: 0s;
+}
+
+/* 后层（视觉下层）：品牌绿，掀开前层后短暂露脸 */
+.preloader__layer--second {
+    background: #00ee38;
+    /* 后层延迟 0.15s 再上滑，形成错位 */
+    transition-delay: 0.15s;
+}
+
+/* ----- 进入"加载完成"状态 ----- */
+/* JS 在加载到 100% 后给 .preloader 加 .is-done，触发两层一前一后上滑 */
+.preloader.is-done .preloader__layer {
+    transform: translateY(-100%);
+}
+
+/* ----- 动画完全结束后 ----- */
+/* 用 display: none 把 preloader 从渲染树里移除，节省合成开销 */
+.preloader.is-hidden {
+    display: none;
+}
+
+/* ---- 中央百分比文字 "00 %" ---- */
+.preloader__count {
+    /* 用 flex + baseline 让数字和 % 在大字号下对齐基线 */
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-size: clamp(80px, 14vw, 220px);
+    font-weight: 300;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    /* 计数本身也做一个轻微的入场：起始略下沉 + 透明，
+       入场后 fade-in。关键是与帘幕离场不冲突。 */
+    opacity: 0;
+    transform: translateY(20px);
+    /* 入场曲线：与帘幕同曲线，但更短，节奏统一 */
+    transition:
+        opacity 0.6s cubic-bezier(0.77, 0, 0.175, 1),
+        transform 0.6s cubic-bezier(0.77, 0, 0.175, 1);
+}
+
+/* JS 在第一帧（DOMContentLoaded 之后）给 .preloader 加 .is-ready，触发数字淡入 */
+.preloader.is-ready .preloader__count {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* 帘幕开始上滑时，让数字先一步淡出，避免数字"被切到一半"的违和感 */
+.preloader.is-done .preloader__count {
+    opacity: 0;
+    transform: translateY(-20px);
+    /* 缩短退场时长，让它在帘幕动起来之前就消失 */
+    transition:
+        opacity 0.3s cubic-bezier(0.77, 0, 0.175, 1),
+        transform 0.3s cubic-bezier(0.77, 0, 0.175, 1);
+}
+
+.preloader__count-number {
+    /* 用 tabular-nums 让 0 → 100 滚动时数字宽度不抖 */
+    font-variant-numeric: tabular-nums;
+}
+
+.preloader__count-percent {
+    /* % 比数字略小一点更精致 */
+    font-size: 0.5em;
+    opacity: 0.7;
+}
+
+
+/* ============================================================================ */
+/* OLD-SCHOOL 主题：装饰图层 + 渐变 + 边框                                       */
+/* ============================================================================ */
+/*
+   组成（默认 modern 主题下全部 display: none / opacity: 0，不影响布局）：
+     1) .theme-paper     ── 全屏网格纸纹（fixed，最底层）
+     2) .theme-masthead  ── 顶部"VOL.01 · EST.2026 · ..."报头条
+     3) .theme-corner    ── 四角装饰星标 ✦
+     4) body.theme-old .container ── 双线边框
+     5) body.theme-old .hero__title ── 文字渐变（background-clip: text）
+     6) body.theme-old .contact__cta ── radial 光晕
+
+   设计准则：
+   - 装饰元素全部 pointer-events: none，不拦截鼠标；
+   - opacity 由 --decor-opacity / --paper-opacity 变量控制，
+     便于通过 transition 平滑显隐；
+   - 不要给装饰层加 z-index 高于 .mousePointer (9999) 或 .preloader (10000)，
+     否则会盖住关键交互层。
+*/
+
+/* ---------- 1) 网格纸纹底层 ---------- */
+.theme-paper {
+    position: fixed;
+    inset: 0;
+    /* 双向交叉的等距网格线，模拟 grid notebook / 印刷蓝线 */
+    background-image:
+        linear-gradient(rgba(43, 29, 18, 0.35) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(43, 29, 18, 0.35) 1px, transparent 1px);
+    background-size: 24px 24px;
+    /* 不拦截鼠标事件，否则下方所有 hover/click 都会失效 */
+    pointer-events: none;
+    /* 默认完全透明，由 --paper-opacity 控制（modern: 0 / old: 0.5） */
+    opacity: var(--paper-opacity);
+    transition: opacity var(--theme-duration) var(--theme-ease);
+    /* 关键：把网格层放在内容之上，但用 mix-blend-mode: multiply
+       让网格只是"乘"在下方像素上 —— 浅色背景 × 网格 = 网格可见，
+       深色文字 × 网格(深) = 文字几乎不变。
+       这就是真正的印刷叠加感，文字不会被遮挡。 */
+    z-index: 50;
+    mix-blend-mode: multiply;
+}
+
+/* ---------- 2) 顶部报头条 ---------- */
+.theme-masthead {
+    /* 默认隐藏，old-school 时由 body.theme-old 解锁显示 */
+    display: none;
+    /* fixed 跨屏顶部，像真实报刊的 issue header */
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    /* 横向居中分布，文字小、间距大，像报纸的横向 issue 标识 */
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 6px 16px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    font-family: var(--font-display);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--fg);
+    /* 默认 opacity = 0，old 主题下解锁 */
+    opacity: var(--decor-opacity);
+    transition: opacity var(--theme-duration) var(--theme-ease);
+    /* 高于纸纹层(50)，但低于自定义指针(9999) 与 preloader(10000) */
+    z-index: 100;
+    pointer-events: none;
+}
+
+body.theme-old .theme-masthead {
+    /* 切到 old-school 才把它从 display: none 中放出来 */
+    display: flex;
+}
+
+.theme-masthead__dot {
+    /* 装饰星号比文字略大一号，呼应印刷品里的 dingbat */
+    font-size: 9px;
+    opacity: 0.6;
+}
+
+/* ---------- 3) 四角星标 ---------- */
+.theme-corner {
+    position: fixed;
+    /* 默认透明，old 主题下解锁 */
+    display: none;
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    color: var(--fg);
+    pointer-events: none;
+    opacity: var(--decor-opacity);
+    transition: opacity var(--theme-duration) var(--theme-ease);
+    /* 与报头条同层级，避开纸纹的 multiply 影响 */
+    z-index: 100;
+}
+
+body.theme-old .theme-corner {
+    display: block;
+}
+
+.theme-corner--tl { top: 36px;    left: 16px; }
+.theme-corner--tr { top: 36px;    right: 16px; }
+.theme-corner--bl { bottom: 16px; left: 16px; }
+.theme-corner--br { bottom: 16px; right: 16px; }
+
+
+/* ---------- 4) 容器双线边框 ---------- */
+/* 思路：用 outline + box-shadow 叠加做"双线边框"，避免改 padding/box-sizing 影响布局 */
+body.theme-old .container {
+    /* 顶部预留报头条空间 */
+    padding-top: 64px;
+    /* 内框：贴近内容的细边 */
+    outline: 1px solid var(--border);
+    outline-offset: -16px;
+}
+
+/* ---------- 5) Hero 标题：印刷油墨渐变 ---------- */
+/* 关键技巧：background-clip: text 让背景渐变只在字符形状内显示，
+   配合 color: transparent 让原本的文字色不挡住渐变。 */
+body.theme-old .hero__greeting,
+body.theme-old .hero__title,
+body.theme-old .contact__cta-title {
+    background-image: var(--hero-gradient);
+    background-size: 200% 100%;
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+    /* 渐变缓慢横移，模拟"印刷色阶"的呼吸感 */
+    animation: ink-shift 8s linear infinite;
+}
+
+@keyframes ink-shift {
+    0%   { background-position:   0% 50%; }
+    100% { background-position: 200% 50%; }
+}
+
+/* 锁定后的字符也要走渐变（覆盖 .char--locked 的 var(--fg) 黑字） */
+body.theme-old .hero__title .char--locked {
+    color: transparent;
+}
+
+/* ---------- 6) Contact CTA：radial 光晕 ---------- */
+body.theme-old .contact__cta {
+    position: relative;
+    /* radial 渐变作为背景，从中心向外散开的暖色光晕，与红色 accent 呼应 */
+    background:
+        radial-gradient(ellipse at center, var(--accent-soft) 0%, transparent 70%);
+    /* 让渐变范围比字稍大，溢出更柔 */
+    padding: 24px 0 24px;
+}
+
+/* ---------- 7) 作品列表：每行底部细虚线，像目录页 ---------- */
+body.theme-old .works__item {
+    /* 用 dotted 边框模拟印刷目录的引导线 */
+    border-bottom: 1px dotted var(--border);
+    width: 100%;
+    /* 让箭头能贴到右边 */
+    box-sizing: border-box;
+}
+
+/* ---------- 8) Old-school 下的人像图：单色滤镜 + 边框 ---------- */
+body.theme-old .portrait > img {
+    /* 模拟旧报纸单色印刷：grayscale + sepia + 略降对比 */
+    filter: grayscale(0.6) sepia(0.4) contrast(0.95);
+    transition: filter var(--theme-duration) var(--theme-ease);
+}
+
+body.theme-old .portrait {
+    border: 1px solid var(--border);
+}
+
+/* ---------- 9) Old-school 下的圆环文字：换主题色 ---------- */
+body.theme-old .circle-text text {
+    fill: var(--fg);
+}
+
+/* ---------- 10) Badge 在 old-school 下的字号微调 ----------
+   衬线字体在小字号下笔画细节多，把字距加大一点更清晰 */
+body.theme-old .badge {
+    letter-spacing: 0.1em;
+    font-style: italic;
+}
+
+/* ---------- 11) 自定义指针 .big 状态：用主题主色作为反色底 ---------- */
+/* mix-blend-mode: difference 已经在 modern 主题下表现良好；
+   这里只确保在 old-school 主题下背景色读最新的 accent，让色彩反转一致。
+   .big 原有的半透明白色背景会在两个主题下都产生反色，无需大改。 */

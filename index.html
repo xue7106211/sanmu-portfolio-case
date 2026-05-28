@@ -9,7 +9,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <!-- 引入 Inter 字体家族，作为 Helvetica Neue 在非 macOS 系统下的补底 -->
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap">
+    <!-- 同时引入 DM Serif Display 衬线字体，用于 old-school 主题下的报刊/杂志感标题 -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=DM+Serif+Display:ital@0;1&family=DM+Serif+Text:ital@0;1&display=swap">
     <!-- 引入外部样式表 -->
     <link rel="stylesheet" href="./src/style.css">
     <!-- 引入 jQuery（CDN），先于 Paper.js 加载，便于后续脚本统一使用 -->
@@ -33,6 +34,29 @@
 </head>
 
 <body>
+    <!-- =================================================================
+         预加载动画（Preloader）
+         结构（注意 DOM 顺序与 z-index 的关系）：
+           .preloader
+             ├─ .preloader__layer--second   ← 后层（品牌绿），先放 DOM → 视觉在下层
+             └─ .preloader__layer--first    ← 前层（纯黑 + LOADING），后放 → 视觉在上层
+                  └─ .preloader__count       ── "00 %" 实时计数
+         设计：
+           - 两层都是 100vw × 100vh 的全屏 div，position: fixed；
+           - 加载完成后，前层先上滑（translateY 0 → -100%）露出后层；
+             后层用 transition-delay 错开 0.15s 再上滑，形成"双层帘幕"错位感；
+           - 写在 body 最前面，并配合 z-index: 9999 确保覆盖所有内容。
+         ================================================================= -->
+    <div class="preloader" id="preloader">
+        <div class="preloader__layer preloader__layer--second"></div>
+        <div class="preloader__layer preloader__layer--first">
+            <div class="preloader__count">
+                <span class="preloader__count-number">0</span>
+                <span class="preloader__count-percent">%</span>
+            </div>
+        </div>
+    </div>
+
     <!-- Paper.js 画布，resize 属性会让画布自动适配窗口尺寸
     <canvas id="myCanvas" resize></canvas> -->
 
@@ -40,6 +64,28 @@
     </div>
 
     <div class="container">
+        <!-- =================================================================
+             Old-school 主题装饰图层
+             默认（modern）主题下全部 display: none，body.theme-old 时显形。
+             - .theme-paper        ── 网格纸纹底层（fixed 全屏，最底层）
+             - .theme-masthead     ── 顶部"VOL.01 · EST.2026 · ..."报头条
+             - .theme-corner       ── 四角装饰星标 ✦ + 编号
+             ================================================================= -->
+        <div class="theme-paper" aria-hidden="true"></div>
+        <div class="theme-masthead" aria-hidden="true">
+            <span>VOL. 01</span>
+            <span class="theme-masthead__dot">✦</span>
+            <span>EST. 2026</span>
+            <span class="theme-masthead__dot">✦</span>
+            <span>SANDRA HALLER — PORTFOLIO</span>
+            <span class="theme-masthead__dot">✦</span>
+            <span>OLD SCHOOL EDITION</span>
+        </div>
+        <div class="theme-corner theme-corner--tl" aria-hidden="true">✦ N°01</div>
+        <div class="theme-corner theme-corner--tr" aria-hidden="true">N°02 ✦</div>
+        <div class="theme-corner theme-corner--bl" aria-hidden="true">✦ N°03</div>
+        <div class="theme-corner theme-corner--br" aria-hidden="true">N°04 ✦</div>
+
         <div class="info-header">
             <div class="top-bar">
                 <span class="brand">Portfolio</span>

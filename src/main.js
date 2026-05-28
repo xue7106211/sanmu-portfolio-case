@@ -6,6 +6,82 @@
 
 
 /* -------------------------------------------------------------------------- */
+/* 页面预加载动画（Preloader）                                                  */
+/* -------------------------------------------------------------------------- */
+/*
+   流程拆解（与 CSS 配合）：
+     1) 页面一进来 .preloader 默认覆盖全屏，前层黑、后层绿；
+     2) DOMContentLoaded 后给 .preloader 加 .is-ready —— 中央百分比淡入；
+     3) 用 setTimeout（这里更准确的做法是 setInterval / rAF）模拟"加载进度"，
+        把 0 → 100 的数字写到 .preloader__count-number；
+     4) 进度到 100% 时给 .preloader 加 .is-done —— 触发 CSS transition：
+          - 前层立刻上滑（transition-delay: 0）；
+          - 后层延迟 0.15s 上滑（CSS 里写好的 transition-delay）；
+     5) 监听最后一层（后层）的 transitionend，加 .is-hidden（display: none），
+        把 preloader 完全从渲染树移除，节省合成开销。
+
+   关键点：
+   - "进度模拟" 用 setTimeout 递归，便于让步长不均匀（前快后慢更真实）；
+     若想要稳定节拍，可以换成 setInterval / requestAnimationFrame。
+   - transition-delay 是错位动画的核心，不需要 JS 介入第二层的时机。
+   - 离场时让计数文字先一步淡出（CSS 已处理），避免帘幕掀到一半还能看到数字。
+   - GSAP 也能完成同样效果（gsap.timeline().to(layer1).to(layer2, '-=0.85')），
+     这里用纯 CSS 是因为它更轻量、易复用，且不依赖 GSAP 的加载状态——
+     如果 GSAP 加载慢，预加载动画自己就先报废了，这是要避免的。
+*/
+(function runPreloader() {
+    const preloader = document.getElementById('preloader');
+    if (!preloader) return;
+
+    const numberEl = preloader.querySelector('.preloader__count-number');
+    // 取后层作为"动画终点"的标志：因为它有 0.15s 的 transition-delay，
+    // 它的 transitionend 一定晚于前层，最适合用来判断整套动画结束。
+    const lastLayer = preloader.querySelector('.preloader__layer--second');
+
+    // 加载完成后再淡入百分比，避免初帧闪烁
+    requestAnimationFrame(() => preloader.classList.add('is-ready'));
+
+    let progress = 0;
+
+    // 用 setTimeout 递归，做"步长不均匀"的进度模拟（前快后慢更像真实加载）
+    function step() {
+        // 剩余越多步长越大；剩余越少步长越小，模拟"最后一公里"那种慢吞吞
+        const remaining = 100 - progress;
+        // Math.max(1, ...) 保证不会卡死在 99 不前进
+        const delta = Math.max(1, Math.round(remaining * 0.08));
+        progress = Math.min(100, progress + delta);
+        if (numberEl) numberEl.textContent = progress;
+
+        if (progress < 100) {
+            // 80~180ms 的随机间隔，让节奏不机械
+            setTimeout(step, 80 + Math.random() * 100);
+        } else {
+            // 进度到顶后稍停一拍再开始离场，让用户"看清楚"100%
+            setTimeout(() => {
+                preloader.classList.add('is-done');
+            }, 250);
+        }
+    }
+
+    // 包一层 setTimeout 让首帧的 .is-ready 渐入先跑起来
+    setTimeout(step, 200);
+
+    // 监听最后一层离场结束 → 把整个 preloader 收掉
+    if (lastLayer) {
+        lastLayer.addEventListener(
+            'transitionend',
+            (e) => {
+                // 仅响应 transform（避免被其它属性的 transitionend 误触发）
+                if (e.propertyName !== 'transform') return;
+                preloader.classList.add('is-hidden');
+            },
+            { once: true }
+        );
+    }
+})();
+
+
+/* -------------------------------------------------------------------------- */
 /* GSAP 初始化                                                                  */
 /* -------------------------------------------------------------------------- */
 // GSAP 与 ScrollTrigger 都是通过 CDN 在 index.html 里以全局脚本的方式加载，
@@ -480,3 +556,73 @@ if ($heroTitle.length) {
         if (activeSpan === span) activeSpan = null;
     }
 }
+
+
+
+/* -------------------------------------------------------------------------- */
+/* 主题切换：Modern ↔ Old-school                                                */
+/* -------------------------------------------------------------------------- */
+/*
+   核心契约（与 CSS 配合）：
+   - 状态由 <body> 的类名承载：默认无类 = modern；加 .theme-old = old-school；
+   - 切换时先加 .theme-transitioning 挂全局过渡，700ms 后摘掉，
+     避免长期挂着通配符 transition 拖累其它交互动画；
+   - localStorage 持久化用户选择，下次刷新恢复；
+   - 触发器复用 HTML 里已有的 #toggle-old-school checkbox：
+     不需要新增 DOM、也不破坏纯 CSS 视觉切换的机制。
+
+   注意：
+   - JS 只做"挂类名 + 持久化"，所有视觉细节（颜色/字体/装饰图层）都在 CSS。
+   - 这套设计是面向"可扩展"的：加第三套主题只需加一个变量覆盖块和一个类名映射，
+     JS 不需要变。
+*/
+(function setupThemeToggle() {
+    const toggle = document.getElementById('toggle-old-school');
+    if (!toggle) return;
+
+    const STORAGE_KEY = 'sanmu-theme';
+    const TRANSITION_MS = 700;
+
+    /**
+     * 应用主题。
+     * @param {boolean} isOld - true = old-school, false = modern
+     * @param {boolean} animate - 是否挂临时过渡类名（首次初始化时 false，避免页面首屏闪过渡）
+     */
+    function applyTheme(isOld, animate = true) {
+        if (animate) {
+            document.body.classList.add('theme-transitioning');
+            // 等过渡跑完再摘掉，避免长期挂通配符 transition
+            setTimeout(
+                () => document.body.classList.remove('theme-transitioning'),
+                TRANSITION_MS
+            );
+        }
+        document.body.classList.toggle('theme-old', isOld);
+    }
+
+    // ---- 初始化：从 localStorage 读上次的选择 ----
+    // 包 try/catch 是为了在 Safari 隐私模式 / 某些 webview 里 localStorage
+    // 被禁用时不会让整个 IIFE 抛错中断后续代码。
+    let initialIsOld = false;
+    try {
+        initialIsOld = localStorage.getItem(STORAGE_KEY) === 'old';
+    } catch (_) {
+        // localStorage 不可用就用默认主题，静默降级
+    }
+
+    // 同步 checkbox 视觉状态（CSS 的 :checked 兄弟选择器依赖这个属性）
+    toggle.checked = initialIsOld;
+    // 首次应用不挂过渡，避免页面加载时白→米色的"硬切动画"
+    applyTheme(initialIsOld, false);
+
+    // ---- 监听 change：用户切换时更新主题 + 持久化 ----
+    toggle.addEventListener('change', () => {
+        const isOld = toggle.checked;
+        applyTheme(isOld, true);
+        try {
+            localStorage.setItem(STORAGE_KEY, isOld ? 'old' : 'modern');
+        } catch (_) {
+            // 静默降级：写不进就算了，不影响主题切换效果本身
+        }
+    });
+})();
