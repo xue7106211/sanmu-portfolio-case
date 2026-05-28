@@ -555,37 +555,69 @@ html, body {
 
 
 /* -------------------------------------------------------------------------- */
-/* Hero 标题：逐字淡入打字机效果                                                 */
+/* Hero 标题：字符扰动（scramble）效果                                           */
 /* -------------------------------------------------------------------------- */
 /* 思路：
-   1) JS 把 .hero__title 的文字拆成 <span class="char">，空格保留为不可断行空白；
-   2) 每个 char 默认 opacity:0 + translateY 偏移，加上 .is-in 类后归位；
-   3) 错峰用 transition-delay：JS 给每个 span 写 inline style --i（索引），
-      CSS 用 calc(var(--i) * step) 算出延迟，HTML 干净、CSS 灵活。 */
+   1) JS 把 .hero__title 拆成 <span class="char">，每个字先填随机符号；
+   2) JS 在动画循环里每帧（限频）替换扰动字符的 textContent，看起来像在乱跳；
+   3) 每个字到达"锁定时间"后写入最终字符，并加 .char--locked 类切换视觉样式；
+   4) 扰动中字符用品牌绿做强调，锁定后回到正文黑色，有"光被收束"的感觉。 */
 
 .hero__title .char {
-    /* 让每个字独立参与 transform，且空格不被合并 */
     display: inline-block;
-    /* 默认隐藏：透明 + 略微下移 + 轻微放大，营造"浮现"感 */
-    opacity: 0;
-    transform: translateY(0.4em);
-    /* 用 CSS 变量 --i（由 JS 写入）+ 每个字的步长，算出错开的延迟 */
-    transition:
-        opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1) calc(var(--i, 0) * 0.04s),
-        transform 0.6s cubic-bezier(0.22, 1, 0.36, 1) calc(var(--i, 0) * 0.04s);
-    /* 让浏览器为这些频繁变化的属性预留合成层 */
-    will-change: opacity, transform;
+    /* 扰动中的字符用品牌绿，营造"码"在跳动的视觉信号 */
+    color: #00ee38;
+    /* 颜色切换加过渡，让锁定瞬间有"收束"感而不是硬切 */
+    transition: color 0.25s ease-out;
+    /* 让 ::after 光标可以以这个 span 为定位锚点 */
+    position: relative;
 }
 
-/* 加上这个类时，所有字一起触发动画，但每个字的 transition-delay 不同，
-   形成"逐字浮现"的错峰节奏 */
-.hero__title.is-in .char {
-    opacity: 1;
-    transform: translateY(0);
+/* 未出现的字符：完全不占位，让标题真的"从空开始打字" */
+.hero__title .char--pending {
+    /* display: none 会让换行重新计算，但因为后续字符也是 pending，
+       不会出现"中间空一段"的奇怪布局 */
+    display: none;
 }
 
-/* 空格也用 span 包裹时，保留宽度不被折叠 */
+/* 已锁定字符：变回正文黑色 */
+.hero__title .char--locked {
+    color: #111;
+}
+
+/* 错字：用红色做强提示，模拟"打错字" */
+.hero__title .char--error {
+    color: #ff3b30;
+}
+
+/* 回退中：textContent 已被清空，元素无内容自然不占空间，无需额外样式 */
+
+/* 空格保留宽度，且不参与扰动（JS 里也跳过） */
 .hero__title .char--space {
-    /* 让空格保留宽度，且不会因为 inline-block 被吃掉 */
     white-space: pre;
+    color: transparent;
+}
+
+/* ---- 光标 ▊ ----
+   只在带 .char--active 的字符尾部用 ::after 绘制；
+   背景色而不是字符 ▊ —— 避免不同系统下光标宽度不一致；
+   闪烁用 CSS animation，单独跑，不依赖状态机。 */
+.hero__title .char--active::after {
+    content: "";
+    display: inline-block;
+    /* 用 em 单位让光标尺寸跟随字号 */
+    width: 0.06em;
+    height: 0.9em;
+    background: currentColor;
+    /* 与字符底部对齐：vertical-align 配合负 margin 微调 */
+    vertical-align: -0.08em;
+    margin-left: 0.05em;
+    /* 闪烁动画 */
+    animation: caret-blink 0.85s steps(2, jump-none) infinite;
+}
+
+/* steps(2, jump-none) 让透明度在 1/0 之间硬切，更像真实光标的闪烁 */
+@keyframes caret-blink {
+    0%, 50%   { opacity: 1; }
+    50.01%, 100% { opacity: 0; }
 }

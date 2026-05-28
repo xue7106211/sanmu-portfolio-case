@@ -319,44 +319,188 @@ if ($worksContainer.length && $magnetItems.length) {
 
 
 /* -------------------------------------------------------------------------- */
-/* Hero 标题：逐字淡入打字机动画                                                 */
+/* Hero 标题：打字机 + 字符扰动 + 打错字 + 光标                                  */
 /* -------------------------------------------------------------------------- */
-// 思路：
-// 1. 取出 .hero__title 的原始文本，按字符遍历
-// 2. 每个字符包成 <span class="char">，空格用 .char--space 标记保留宽度
-// 3. 用 inline style 写入 CSS 变量 --i（字符索引），CSS 据此算 transition-delay
-// 4. 下一个事件循环加 .is-in 类，触发所有 span 的 transition 同时启动，
-//    但每个 span 的 delay 不同，形成"错峰"出现的视觉效果
-// 5. 用 requestAnimationFrame 而不是 setTimeout(0) 确保浏览器已经渲染了初始状态，
-//    避免动画从"初始状态 + 已淡入"开始而看不到效果
+// 五态状态机：
+//   pending → scrambling → ┬─ locked                  （顺利写出）
+//                          └─ error → backspacing → locked   （打错回退后写出）
+//
+// 时间轴策略：
+//   采用"顺序时间轴"——前一个字符的 lockAt 加上 PER_CHAR_DELAY 才是下一个字符
+//   的 startAt。这样同一时间至多只有一个字符在 scrambling/error/backspacing
+//   状态，光标位置才能"始终在当前正在打的字尾部"。
+//
+// 时间锚点（按状态机分支）：
+//   非打错：startAt → scrambleEndAt(=lockAt) → 进入 locked
+//   打错  ：startAt → scrambleEndAt → errorEndAt → backspaceEndAt(=lockAt) → locked
+//
+// 光标实现：
+//   在最左侧非 pending / 非 locked 字符上挂 .char--active 类，CSS 用 ::after
+//   绘制一个闪烁的 ▊。光标"自动跟随"——一旦活跃字符变更，前一帧的 active 移
+//   除、当前帧的 active 添加。
 
 const $heroTitle = $('.hero__title');
 
 if ($heroTitle.length) {
     const titleEl = $heroTitle[0];
-    const text = titleEl.textContent;
+    const finalText = titleEl.textContent;
 
-    // 清空原文本后按字符重建
+    // 扰动符号池
+    const SCRAMBLE_POOL = '!<>-_\\/[]{}—=+*^?#$%&@'.split('');
+
+    // ---- 时间参数（顺序打字，前后字符不重叠） ----
+    const PER_CHAR_DELAY = 50;       // 字间停顿
+    const SCRAMBLE_DURATION = 130;   // 每个字扰动时长
+    const ERROR_DURATION = 120;      // 错字停留时长
+    const BACKSPACE_DURATION = 70;   // 回退（空白）时长
+    const SCRAMBLE_INTERVAL = 30;    // 扰动符号刷新频率
+
+    // ---- 打错字参数 ----
+    const TYPO_PROBABILITY = 0.2;    // 每个候选字符 20% 概率打错
+    const TYPO_MIN_GAP = 3;          // 两次打错至少间隔 3 个字符，避免连续打错
+
+    // 根据正确字符挑一个"看起来像打错"的字符（同大小写的随机字母）
+    function pickWrongChar(correct) {
+        const lower = 'abcdefghijklmnopqrstuvwxyz';
+        const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        let pool;
+        if (/[a-z]/.test(correct)) pool = lower;
+        else if (/[A-Z]/.test(correct)) pool = upper;
+        // 非字母（如逗号、句号）兜底为随机小写字母
+        else return lower[Math.floor(Math.random() * lower.length)];
+        // 防止抽到原字符；safety 计数避免极端情况下死循环
+        let pick = correct;
+        let safety = 0;
+        while (pick === correct && safety++ < 10) {
+            pick = pool[Math.floor(Math.random() * pool.length)];
+        }
+        return pick;
+    }
+
     titleEl.textContent = '';
 
-    // 用 DocumentFragment 批量插入，减少回流
+    const chars = [];
     const frag = document.createDocumentFragment();
-    [...text].forEach((ch, i) => {
+
+    // 顺序时间轴：累加每个字符的占用时长，确保前后不重叠
+    let timeline = 0;
+    let charsSinceTypo = TYPO_MIN_GAP; // 让首字符即可能打错
+
+    [...finalText].forEach((ch) => {
         const span = document.createElement('span');
-        span.className = ch === ' ' ? 'char char--space' : 'char';
-        // 用 \u00A0（不间断空格）也行，但配合 .char--space 的 white-space: pre 更稳
-        span.textContent = ch;
-        // CSS 变量 --i 控制每个字的 transition-delay
-        span.style.setProperty('--i', i);
+        const isSpace = ch === ' ';
+        span.className = isSpace ? 'char char--space char--pending' : 'char char--pending';
+        span.textContent = '';
         frag.appendChild(span);
+
+        const startAt = timeline;
+        const scrambleEndAt = startAt + SCRAMBLE_DURATION;
+
+        // 仅对字母字符做打错判断（标点保持原样，避免出现"句号 → 字母"的违和感）
+        const canTypo = !isSpace && /[a-zA-Z]/.test(ch) && charsSinceTypo >= TYPO_MIN_GAP;
+        const willTypo = canTypo && Math.random() < TYPO_PROBABILITY;
+
+        const data = {
+            el: span,
+            finalChar: ch,
+            isSpace,
+            state: 'pending',
+            startAt,
+            scrambleEndAt,
+            willTypo,
+        };
+
+        if (willTypo) {
+            data.wrongChar = pickWrongChar(ch);
+            data.errorEndAt = scrambleEndAt + ERROR_DURATION;
+            data.backspaceEndAt = data.errorEndAt + BACKSPACE_DURATION;
+            data.lockAt = data.backspaceEndAt;
+            charsSinceTypo = 0;
+        } else {
+            data.lockAt = scrambleEndAt;
+            charsSinceTypo++;
+        }
+
+        chars.push(data);
+        // 下一字符从当前字符 lockAt + 字间间距 开始
+        timeline = data.lockAt + PER_CHAR_DELAY;
     });
     titleEl.appendChild(frag);
 
-    // 关键：先让浏览器把"全部隐藏"的初始状态绘制出来，再加 .is-in 触发动画
-    // 双 rAF 是为了跨过同一帧的样式计算，确保 transition 能正确从 0 → 1 过渡
-    requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-            titleEl.classList.add('is-in');
+    const startTime = performance.now();
+    let lastScrambleTime = 0;
+    let prevActiveChar = null; // 缓存活跃字符，仅在变化时更新 .char--active
+
+    function tick(now) {
+        const elapsed = now - startTime;
+        const shouldScramble = now - lastScrambleTime >= SCRAMBLE_INTERVAL;
+        if (shouldScramble) lastScrambleTime = now;
+
+        let allLocked = true;
+        let activeChar = null;
+
+        chars.forEach((c) => {
+            if (c.state === 'locked') return;
+            allLocked = false;
+
+            // ---- 状态转移（按状态机顺序串联，单帧内可级联多次以兜住掉帧） ----
+            // pending → scrambling
+            if (c.state === 'pending' && elapsed >= c.startAt) {
+                c.el.classList.remove('char--pending');
+                c.state = 'scrambling';
+            }
+            // scrambling → error / locked
+            if (c.state === 'scrambling' && elapsed >= c.scrambleEndAt) {
+                if (c.willTypo) {
+                    c.el.classList.add('char--error');
+                    c.el.textContent = c.wrongChar;
+                    c.state = 'error';
+                } else {
+                    c.el.classList.add('char--locked');
+                    c.el.textContent = c.finalChar;
+                    c.state = 'locked';
+                    return;
+                }
+            }
+            // error → backspacing：把 textContent 清空，宽度归零 = "删除字符"
+            if (c.state === 'error' && elapsed >= c.errorEndAt) {
+                c.el.classList.remove('char--error');
+                c.el.classList.add('char--backspacing');
+                c.el.textContent = '';
+                c.state = 'backspacing';
+            }
+            // backspacing → locked
+            if (c.state === 'backspacing' && elapsed >= c.backspaceEndAt) {
+                c.el.classList.remove('char--backspacing');
+                c.el.classList.add('char--locked');
+                c.el.textContent = c.finalChar;
+                c.state = 'locked';
+                return;
+            }
+
+            // ---- 扰动期：节流刷新随机符号 ----
+            if (c.state === 'scrambling' && shouldScramble) {
+                c.el.textContent = c.isSpace
+                    ? c.finalChar
+                    : SCRAMBLE_POOL[Math.floor(Math.random() * SCRAMBLE_POOL.length)];
+            }
+
+            // ---- 标记最左侧"活跃"字符（即当前光标所在字符） ----
+            // 顺序时间轴下，活跃字符任意时刻最多一个
+            if (!activeChar && c.state !== 'pending') {
+                activeChar = c;
+            }
         });
-    });
+
+        // ---- 光标跟随：仅在活跃字符变更时增删 .char--active，避免每帧抖动 ----
+        if (activeChar !== prevActiveChar) {
+            if (prevActiveChar) prevActiveChar.el.classList.remove('char--active');
+            if (activeChar) activeChar.el.classList.add('char--active');
+            prevActiveChar = activeChar;
+        }
+
+        if (!allLocked) requestAnimationFrame(tick);
+    }
+
+    requestAnimationFrame(tick);
 }
