@@ -118,6 +118,60 @@
                 <img class="works__thumb-img" src="" alt="">
             </div>
         </section>
+
+        <!-- =================================================================
+             第三屏：Contact / Let's talk
+             结构：
+               .contact
+                 ├─ .contact__label    ── 左上角小标签 "Contact"
+                 ├─ .contact__info     ── 名片信息行（左：联系方式；右：副文案）
+                 │     ├─ .contact__details
+                 │     └─ .contact__aside
+                 └─ .contact__cta      ── 巨型 "LET'S TALK" + 右上箭头 ↗
+                       ├─ .contact__cta-title
+                       └─ .contact__cta-arrow
+             设计要点：
+               - "LET'S TALK" 字号 / 字重沿用 .hero__title 的视觉节奏，让首尾呼应；
+               - .contact__cta 用 border-bottom 画底部分隔线，避免再多写一个空盒；
+               - 箭头用 SVG 而不是 Unicode："↗" 在不同系统下宽度差异大，SVG 更稳；
+               - .contact__cta 整体可点击 → 用 <a>，并加 data-bigdot 加入指针放大体系。
+             ================================================================= -->
+        <section class="contact">
+            <p class="contact__label">Contact</p>
+
+            <div class="contact__info">
+                <!-- 左侧：作者联系方式（mailto / linkedin 都做成可点击链接） -->
+                <div class="contact__details">
+                    <p class="contact__name">Sandra Haller</p>
+                    <a class="contact__link" href="mailto:sandraahaller@gmail.com" data-bigdot="true">sandraahaller@gmail.com</a>
+                    <a class="contact__link" href="#" data-bigdot="true">Linkedin</a>
+                </div>
+
+                <!-- 右侧：副文案；末尾 × 用一个独立的 .contact__close 装饰，
+                     视觉上像"可关闭的提示"，但当前没有交互，先做静态展示 -->
+                <div class="contact__aside">
+                    <p class="contact__aside-line">You want to know more about me?</p>
+                    <p class="contact__aside-line">
+                        Here are a few things I like
+                        <span class="contact__close" aria-hidden="true">×</span>
+                    </p>
+                </div>
+            </div>
+
+            <!-- 整块 CTA：标题 + 角标箭头，整行可点击 -->
+            <a class="contact__cta" href="mailto:sandraahaller@gmail.com" data-bigdot="true">
+                <span class="contact__cta-title">LET'S TALK</span>
+                <span class="contact__cta-arrow" aria-hidden="true">
+                    <!-- 24px 视图的 ↗ 箭头：从左下到右上的折线 + 短斜杠箭头羽毛 -->
+                    <svg viewBox="0 0 32 32" width="48" height="48">
+                        <!-- 箭杆 + 箭头一笔画完成；stroke-linecap="square" 与设计稿更接近 -->
+                        <path d="M8 24 L24 8 M12 8 H24 V20"
+                              fill="none" stroke="currentColor" stroke-width="2"
+                              stroke-linecap="square" stroke-linejoin="miter" />
+                    </svg>
+                </span>
+            </a>
+        </section>
     </div>
 
 
