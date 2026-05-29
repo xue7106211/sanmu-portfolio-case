@@ -8,66 +8,165 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=DM+Serif+Display:ital@0;1&family=DM+Serif+Text:ital@0;1&display=swap">
-    <!-- 本页与 index.html 同级，所以样式路径仍是 ./src/style.css -->
+    <!-- 本页与 index.html 同级，样式路径仍是 ./src/style.css -->
     <link rel="stylesheet" href="./src/style.css">
+    <!-- 横向滚动依赖 GSAP + ScrollTrigger（与首页同一套 CDN）。
+         普通脚本（非 module）会同步执行，先于下方 module 脚本就绪，
+         所以 more-works.js 里可以直接用全局 gsap / ScrollTrigger。 -->
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
 </head>
 
-<body>
+<body class="mw-body">
     <!-- 自定义鼠标指针：与首页同一个 DOM 契约（CSS 已全局隐藏系统光标） -->
     <div class="mousePointer"></div>
 
-    <!-- old-school 装饰图层（默认 modern 主题下不显形，主题跟随首页 localStorage） -->
+    <!-- old-school 装饰层（默认 modern 主题下不显形，主题跟随首页 localStorage） -->
     <div class="theme-paper" aria-hidden="true"></div>
 
-    <div class="container">
-        <!-- 返回导航：./index.html 是相对路径写法；
-             也可写成 "/" 或 "/index.html"（绝对路径，从站点根解析）。 -->
-        <nav class="subpage-nav">
-            <a class="subpage-nav__back" href="./index.html" data-bigdot="true">
-                <span aria-hidden="true">←</span> Back to home
-            </a>
-            <span class="subpage-nav__crumb">/ More works</span>
-        </nav>
+    <!-- =================================================================
+         固定 Header
+         - position: fixed，横向滚动时保持稳定（需求：Header 固定）
+         - 左：返回首页（相对路径 ./index.html）；右：页面标识
+         ================================================================= -->
+    <header class="mw-header">
+        <a class="subpage-nav__back" href="./index.html" data-bigdot="true">
+            <span aria-hidden="true">←</span> Back to home
+        </a>
+        <span class="mw-header__brand">More works — Archive</span>
+    </header>
 
-        <p class="project__label">Archive</p>
-        <h1 class="project__title">More works</h1>
-        <p class="project__intro">
-            A wider selection of projects across branding, web and editorial design.
-        </p>
+    <!-- =================================================================
+         横向滚动区（会被 ScrollTrigger pin 住）
+         结构：
+           .h-scroll                 ← 100vh 容器，滚动经过时被钉住
+             └─ .h-scroll__track     ← 横向 flex 长条，JS 用 transform 左移
+                  ├─ .h-panel--intro   超大标题 MORE WORKS
+                  ├─ .h-panel--collage 错落图片拼贴（设计稿图 1）
+                  └─ .work-card × 3    作品卡片（设计稿图 2）
+         说明：track 的总宽超出视口，JS 把"垂直滚动距离"映射成 track 的
+               translateX，从而实现垂直滚动 → 横向移动的联动。
+         ================================================================= -->
+    <section class="h-scroll" id="hScroll" aria-label="More works horizontal gallery">
+        <div class="h-scroll__track" id="hTrack">
 
-        <!-- 卡片网格：每张卡片用 <a> 跳到对应作品详情页。
-             这里统一用"相对路径 + 文件夹"写法（./works/<slug>/），
-             浏览器会自动解析为该目录下的 index.html。 -->
-        <div class="gallery">
-            <a class="gallery__card" href="./works/recongroup/" data-bigdot="true">
-                <span class="gallery__thumb"><img src="https://picsum.photos/id/1015/600/400" alt="Recongroup"></span>
-                <span class="gallery__name">Recongroup</span>
-            </a>
-            <a class="gallery__card" href="./works/glassland/" data-bigdot="true">
-                <span class="gallery__thumb"><img src="https://picsum.photos/id/1018/600/400" alt="Glassland"></span>
-                <span class="gallery__name">Glassland</span>
-            </a>
-            <a class="gallery__card" href="./works/pefc/" data-bigdot="true">
-                <span class="gallery__thumb"><img src="https://picsum.photos/id/1043/600/400" alt="PEFC"></span>
-                <span class="gallery__name">PEFC</span>
-            </a>
-            <a class="gallery__card" href="./works/biosphere-lab-lungau/" data-bigdot="true">
-                <span class="gallery__thumb"><img src="https://picsum.photos/id/1069/600/400" alt="Biosphere Lab Lungau"></span>
-                <span class="gallery__name">Biosphere Lab Lungau</span>
-            </a>
-            <a class="gallery__card" href="./works/ziid/" data-bigdot="true">
-                <span class="gallery__thumb"><img src="https://picsum.photos/id/1074/600/400" alt="ZIID"></span>
-                <span class="gallery__name">ZIID</span>
-            </a>
-            <a class="gallery__card" href="./works/hotel-gambswirt/" data-bigdot="true">
-                <span class="gallery__thumb"><img src="https://picsum.photos/id/110/600/400" alt="Hotel Gambswirt"></span>
-                <span class="gallery__name">Hotel Gambswirt</span>
-            </a>
+            <!-- panel 0：开场超大标题（对应设计稿左上的 MORE WORKS） -->
+            <div class="h-panel h-panel--intro">
+                <h1 class="h-panel__title">MORE<br>WORKS</h1>
+                <p class="h-panel__sub">
+                    A wider selection of projects.<br>
+                    Scroll down to move sideways →
+                </p>
+            </div>
+
+            <!-- panel 1：错落图片拼贴墙（对应设计稿图 1） -->
+            <div class="h-panel h-panel--collage" aria-label="Selected imagery">
+                <figure class="mw-collage__item"><img src="https://picsum.photos/id/292/600/900" alt=""></figure>
+                <figure class="mw-collage__item"><img src="https://picsum.photos/id/431/600/900" alt=""></figure>
+                <figure class="mw-collage__item"><img src="https://picsum.photos/id/163/600/900" alt=""></figure>
+                <figure class="mw-collage__item"><img src="https://picsum.photos/id/823/600/900" alt=""></figure>
+                <figure class="mw-collage__item"><img src="https://picsum.photos/id/1059/600/900" alt=""></figure>
+            </div>
+
+            <!-- panel 2：作品卡片 Hotelbaumeister -->
+            <article class="h-panel work-card" data-bigdot="true">
+                <h2 class="work-card__title">Hotelbaumeister</h2>
+                <div class="work-card__media">
+                    <img src="https://picsum.photos/id/1062/800/600" alt="Hotelbaumeister">
+                </div>
+                <dl class="work-card__meta">
+                    <div class="work-card__row">
+                        <dt>Services</dt>
+                        <dd>Webdesign &amp; Development</dd>
+                    </div>
+                    <div class="work-card__row">
+                        <dt>Domain</dt>
+                        <dd>www.hotelbaumeister.at</dd>
+                    </div>
+                    <div class="work-card__row">
+                        <dt>For</dt>
+                        <dd>KWER</dd>
+                    </div>
+                    <div class="work-card__row">
+                        <dt>Finished</dt>
+                        <dd>2021</dd>
+                    </div>
+                </dl>
+            </article>
+
+            <!-- panel 3：作品卡片 Das Liftplatzl -->
+            <article class="h-panel work-card" data-bigdot="true">
+                <h2 class="work-card__title">Das Liftplatzl</h2>
+                <div class="work-card__media">
+                    <img src="https://picsum.photos/id/1036/800/600" alt="Das Liftplatzl">
+                </div>
+                <dl class="work-card__meta">
+                    <div class="work-card__row">
+                        <dt>Services</dt>
+                        <dd>CD / Webdesign &amp; Development</dd>
+                    </div>
+                    <div class="work-card__row">
+                        <dt>Domain</dt>
+                        <dd>www.liftplatzl.at</dd>
+                    </div>
+                    <div class="work-card__row">
+                        <dt>For</dt>
+                        <dd>KWER</dd>
+                    </div>
+                    <div class="work-card__row">
+                        <dt>Finished</dt>
+                        <dd>2021</dd>
+                    </div>
+                </dl>
+            </article>
+
+            <!-- panel 4：作品卡片 st martin chalets -->
+            <article class="h-panel work-card" data-bigdot="true">
+                <h2 class="work-card__title">st martin chalets</h2>
+                <div class="work-card__media">
+                    <img src="https://picsum.photos/id/1018/800/600" alt="st martin chalets">
+                </div>
+                <dl class="work-card__meta">
+                    <div class="work-card__row">
+                        <dt>Services</dt>
+                        <dd>Webdesign &amp; Development</dd>
+                    </div>
+                    <div class="work-card__row">
+                        <dt>Domain</dt>
+                        <dd>www.stmartinchalets.at</dd>
+                    </div>
+                    <div class="work-card__row">
+                        <dt>For</dt>
+                        <dd>KWER</dd>
+                    </div>
+                    <div class="work-card__row">
+                        <dt>Finished</dt>
+                        <dd>2021</dd>
+                    </div>
+                </dl>
+            </article>
+
         </div>
-    </div>
+    </section>
 
-    <!-- jQuery 不是必须的：子页面只用原生 JS。轻量、加载快。 -->
+    <!-- =================================================================
+         固定 Footer
+         - position: fixed，横向滚动时保持稳定（需求：Footer 固定）
+         - 中间进度条 + 右侧计数，跟随 ScrollTrigger 进度实时更新，
+           强化"垂直滚动 ↔ 横向移动"的联动反馈
+         ================================================================= -->
+    <footer class="mw-footer">
+        <span class="mw-footer__hint">Scroll to explore</span>
+        <div class="mw-footer__progress" aria-hidden="true">
+            <span class="mw-footer__bar" id="hProgress"></span>
+        </div>
+        <span class="mw-footer__count" id="hCount">01 / 05</span>
+    </footer>
+
+    <!-- 共享脚本：自定义指针 + 主题跟随（原生 JS，轻量） -->
     <script type="module" src="./src/subpage.js"></script>
+    <!-- 本页专属：横向滚动联动 -->
+    <script type="module" src="./src/more-works.js"></script>
 </body>
 
 </html>

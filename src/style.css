@@ -1389,3 +1389,313 @@ body.theme-old .project__cover > img {
 body.theme-old .gallery__thumb > img {
     filter: grayscale(0.6) sepia(0.4) contrast(0.95);
 }
+
+
+/* ============================================================================ */
+/* More works 页：横向滚动联动（Header/Footer 固定 + 中间横向滚动）              */
+/* ============================================================================ */
+/*
+   布局契约：
+   - <body class="mw-body"> 时启用本页专属布局；
+   - Header / Footer 用 position: fixed 钉在视口上下，横向滚动时保持稳定；
+   - 中间 .h-scroll 是 100vh 容器，被 ScrollTrigger pin 住；
+   - .h-scroll__track 是横向 flex 长条，JS 用 transform: translateX 左移。
+
+   关键点：
+   - body 不要设 overflow: hidden —— ScrollTrigger 的 pin 依赖正常的垂直滚动；
+   - track 用 will-change: transform 提示合成层；
+   - 各 panel 用 flex-shrink: 0 防止被压缩，保证总宽超出视口。
+*/
+
+/* 本页 body：去掉默认滚动条横向溢出，纵向滚动交给 ScrollTrigger 驱动 */
+/*
+   关键修复（横向滚动不生效的根因）：
+   全局 `html, body { height: 100%; overflow-y: auto }` 会把 body 变成
+   一个"定高 + 内部滚动"的容器 —— 真正的滚动发生在 body 内部，
+   window.scrollY 始终为 0。而 GSAP ScrollTrigger 默认以 window/
+   documentElement 作为 scroller，读不到 body 的内部滚动，于是
+   pin / scrub 完全收不到滚动事件 → 横向联动失效。
+
+   解决：本页让 html 和 body 回到"正常文档流滚动"（window 作为滚动容器），
+   ScrollTrigger 就能正确读到 window 的滚动量。
+   - 用 :has() 从 body.mw-body 反向选中其祖先 <html>，一并解除 height/overflow 限制；
+   - body 改为 height:auto + min-height:100%，让 pin-spacer 能正常撑高文档。
+
+   再一个易踩的坑：CSS 规范规定，当 overflow-x / overflow-y 一个是 visible、
+   另一个是非 visible（如 hidden）时，visible 会被"计算成 auto"。
+   若这里写 overflow-x:hidden + overflow-y:visible，overflow-y 会被算成 auto，
+   body 又变回滚动容器，修复失效。所以两个轴都必须设 visible。
+   横向溢出无需在 body 层裁剪 —— .h-scroll 自身的 overflow:hidden 已经裁掉了。
+*/
+html:has(body.mw-body) {
+    height: auto;
+    overflow: visible;
+}
+
+.mw-body {
+    height: auto;
+    min-height: 100%;
+    /* 两个轴都 visible：纵向交给 window 文档流滚动，横向由 .h-scroll 自行裁剪 */
+    overflow: visible;
+}
+
+/* ---------- 固定 Header ---------- */
+.mw-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 24px 40px;
+    /* 半透明背景 + 模糊，让其下横向滚动的内容若隐若现但不抢戏 */
+    background: color-mix(in srgb, var(--bg) 82%, transparent);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+.mw-header__brand {
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+}
+
+/* ---------- 固定 Footer ---------- */
+.mw-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    padding: 18px 40px;
+    background: color-mix(in srgb, var(--bg) 82%, transparent);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+}
+
+.mw-footer__hint {
+    flex-shrink: 0;
+}
+
+/* 进度条轨道：占满中间剩余空间 */
+.mw-footer__progress {
+    flex: 1;
+    height: 2px;
+    background: var(--border-strong);
+    /* 默认主题下 --border-strong 是 #111，这里降透明度当轨道底色 */
+    opacity: 0.25;
+    position: relative;
+}
+
+/* 进度条填充：用 scaleX(0→1) 由 JS 驱动，transform-origin 左对齐 */
+.mw-footer__bar {
+    position: absolute;
+    inset: 0;
+    background: var(--accent);
+    transform: scaleX(0);
+    transform-origin: left center;
+    /* 不加 transition：scrub 已经平滑，再叠 transition 会拖沓 */
+}
+
+.mw-footer__count {
+    flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
+    color: var(--fg);
+}
+
+/* ---------- 横向滚动容器（被 pin 住） ---------- */
+.h-scroll {
+    /* 占满一屏高度；pin 期间它被钉在视口，内部 track 横向移动 */
+    height: 100vh;
+    /* 隐藏横向溢出，露出的部分靠 track 的 translateX 推进 */
+    overflow: hidden;
+    /* 让内部 track 垂直居中 */
+    display: flex;
+    align-items: center;
+}
+
+/* 横向长条：所有 panel 并排，总宽超出视口 */
+.h-scroll__track {
+    display: flex;
+    align-items: center;
+    /* 面板之间的间距 */
+    gap: 80px;
+    /* 左右各留出"进场/收尾"留白，避免首尾贴边 */
+    padding: 0 8vw;
+    /* 提示浏览器 transform 会频繁变化，走 GPU 合成 */
+    will-change: transform;
+}
+
+/* 通用面板：不被压缩，保证横向溢出 */
+.h-panel {
+    flex-shrink: 0;
+    box-sizing: border-box;
+}
+
+/* ---------- panel 0：开场超大标题 ---------- */
+.h-panel--intro {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 32px;
+    /* 给标题块一个明确宽度，撑出节奏 */
+    width: 60vw;
+    min-width: 420px;
+}
+
+.h-panel__title {
+    margin: 0;
+    font-size: clamp(64px, 13vw, 220px);
+    font-weight: 300;
+    line-height: 0.92;
+    letter-spacing: -0.03em;
+    text-transform: uppercase;
+    color: var(--fg);
+}
+
+.h-panel__sub {
+    margin: 0;
+    font-size: clamp(16px, 1.6vw, 22px);
+    line-height: 1.5;
+    color: var(--fg-muted);
+}
+
+/* ---------- panel 1：错落图片拼贴墙 ---------- */
+/* 思路：用一个定高的横向 flex，让每张图通过 align-self + margin-top
+   产生上下错落（对应设计稿那种参差的拼贴感）。 */
+.h-panel--collage {
+    display: flex;
+    align-items: flex-start;
+    gap: 40px;
+    height: 80vh;
+    padding: 0 20px;
+}
+
+.mw-collage__item {
+    margin: 0;
+    flex-shrink: 0;
+    width: clamp(180px, 16vw, 260px);
+    height: clamp(280px, 42vh, 460px);
+    overflow: hidden;
+    background: var(--fg-muted);
+    /* GSAP 会持续写这一【整块相框】的 transform（skewX/x/scaleX）做惯性拖尾，
+       提示合成层；transform-origin 居中让倾斜围绕相框中心发生。 */
+    will-change: transform;
+    transform-origin: center center;
+}
+
+.mw-collage__item > img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* 用 nth-child 制造高低错落：偶数项下移，奇数项上移 */
+.mw-collage__item:nth-child(1) { margin-top: 18vh; }
+.mw-collage__item:nth-child(2) { margin-top: 4vh; height: clamp(240px, 36vh, 400px); }
+.mw-collage__item:nth-child(3) { margin-top: 26vh; height: clamp(220px, 32vh, 360px); }
+.mw-collage__item:nth-child(4) { margin-top: 8vh;  height: clamp(300px, 48vh, 520px); }
+.mw-collage__item:nth-child(5) { margin-top: 22vh; }
+
+body.theme-old .mw-collage__item > img {
+    /* 与全站一致的旧报纸单色滤镜 */
+    filter: grayscale(0.6) sepia(0.4) contrast(0.95);
+}
+
+/* ---------- panel 2~4：作品卡片 ---------- */
+.work-card {
+    display: flex;
+    flex-direction: column;
+    width: clamp(320px, 28vw, 420px);
+    /* 卡片整体垂直居中于一屏，呼应设计稿 */
+    cursor: none;
+    /* GSAP 会持续写这一【整张卡片】的 transform（skewX/x/scaleX）做惯性拖尾，
+       提示合成层；transform-origin 居中让倾斜围绕卡片中心发生。 */
+    will-change: transform;
+    transform-origin: center center;
+}
+
+.work-card__title {
+    margin: 0 0 20px 0;
+    font-size: clamp(22px, 2.4vw, 34px);
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    color: var(--fg);
+}
+
+.work-card__media {
+    width: 100%;
+    height: clamp(220px, 26vw, 320px);
+    overflow: hidden;
+    background: var(--fg-muted);
+    margin-bottom: 24px;
+    /* hover 缩放作用在内层媒体框上。
+       GSAP 的惯性拖尾写在【外层 .work-card】的 transform 上，hover 写在
+       这个子级容器上，二者分属不同元素，互不覆盖。 */
+    transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.work-card__media > img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* hover 卡片：媒体框轻微放大，标题切到强调色 */
+.work-card:hover .work-card__media {
+    transform: scale(1.05);
+}
+
+.work-card:hover .work-card__title {
+    color: var(--accent);
+}
+
+/* 元信息表：Services / Domain / For / Finished
+   每行 dt（小灰标签）在上，dd（值，加粗）在下，底部细分隔线 */
+.work-card__meta {
+    margin: 0;
+}
+
+.work-card__row {
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border-strong);
+}
+
+.work-card__row dt {
+    font-size: 12px;
+    color: var(--fg-muted);
+    letter-spacing: 0.04em;
+    margin-bottom: 2px;
+}
+
+.work-card__row dd {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--fg);
+}
+
+body.theme-old .work-card__media > img {
+    filter: grayscale(0.6) sepia(0.4) contrast(0.95);
+}
+
+/* ---------- 可访问性：尊重"减少动态效果"系统偏好 ---------- */
+/* prefers-reduced-motion 下，关掉卡片 hover 的缩放过渡；
+   JS 侧（more-works.js）也会同时跳过惯性拖尾，二者配合。 */
+@media (prefers-reduced-motion: reduce) {
+    .work-card__media {
+        transition: none;
+    }
+}
