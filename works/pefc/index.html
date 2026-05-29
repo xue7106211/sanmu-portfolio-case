@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PEFC — Sanmu Portfolio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=DM+Serif+Display:ital@0;1&family=DM+Serif+Text:ital@0;1&display=swap">
+    <link rel="stylesheet" href="../../src/style.css">
+</head>
+
+<body>
+    <div class="mousePointer"></div>
+    <div class="theme-paper" aria-hidden="true"></div>
+
+    <div class="container">
+        <!-- 本页是从首页"绝对路径 /works/pefc/"跳进来的；
+             返回时演示绝对路径写法："/" 表示站点根（= 根目录 index.html）。
+             注意：绝对路径只有在用静态服务器访问时才正确解析；
+             用 file:// 直接打开会指向磁盘根目录而失效。 -->
+        <nav class="subpage-nav">
+            <a class="subpage-nav__back" href="/" data-bigdot="true">
+                <span aria-hidden="true">←</span> Back to home
+            </a>
+            <span class="subpage-nav__crumb">/ Works / PEFC</span>
+        </nav>
+
+        <p class="project__label">N°03 — Editorial</p>
+        <h1 class="project__title">PEFC</h1>
+        <p class="project__intro">
+            An annual sustainability report and microsite for a forest certification body.
+        </p>
+
+        <div class="project__cover">
+            <img src="https://picsum.photos/id/1043/1600/900" alt="PEFC cover">
+        </div>
+
+        <div class="project__meta">
+            <div class="project__meta-item">
+                <span class="project__meta-key">Role</span>
+                <span class="project__meta-value">Editorial &amp; Web</span>
+            </div>
+            <div class="project__meta-item">
+                <span class="project__meta-key">Year</span>
+                <span class="project__meta-value">2023</span>
+            </div>
+            <div class="project__meta-item">
+                <span class="project__meta-key">Client</span>
+                <span class="project__meta-value">PEFC International</span>
+            </div>
+        </div>
+
+        <div class="project__body">
+            <p>
+                The report turns dry certification data into a story about forests and the
+                people who steward them. A warm, paper-like palette and serif headlines give
+                it the feel of a printed annual.
+            </p>
+            <p>
+                Try the old-school toggle on the home page — this microsite was the direct
+                inspiration for that theme.
+            </p>
+        </div>
+    </div>
+
+    <script type="module" src="../../src/subpage.js"></script>
+</body>
+
+</html>

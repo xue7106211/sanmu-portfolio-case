@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recongroup — Sanmu Portfolio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=DM+Serif+Display:ital@0;1&family=DM+Serif+Text:ital@0;1&display=swap">
+    <!-- 本页位于 works/recongroup/ 下，比 index.html 深两层，
+         所以引用根目录 src/ 下资源要用 ../../ 回退两级。 -->
+    <link rel="stylesheet" href="../../src/style.css">
+</head>
+
+<body>
+    <div class="mousePointer"></div>
+    <div class="theme-paper" aria-hidden="true"></div>
+
+    <div class="container">
+        <!-- 返回首页：../../ 回到站点根的 index.html（相对路径写法）。
+             也可用绝对路径 "/"（从站点根解析），不受当前层级影响。 -->
+        <nav class="subpage-nav">
+            <a class="subpage-nav__back" href="../../index.html" data-bigdot="true">
+                <span aria-hidden="true">←</span> Back to home
+            </a>
+            <span class="subpage-nav__crumb">/ Works / Recongroup</span>
+        </nav>
+
+        <p class="project__label">N°01 — Brand &amp; Web</p>
+        <h1 class="project__title">Recongroup</h1>
+        <p class="project__intro">
+            A corporate identity and website for a consulting collective, built around a
+            confident grid and restrained typography.
+        </p>
+
+        <div class="project__cover">
+            <img src="https://picsum.photos/id/1015/1600/900" alt="Recongroup cover">
+        </div>
+
+        <div class="project__meta">
+            <div class="project__meta-item">
+                <span class="project__meta-key">Role</span>
+                <span class="project__meta-value">Design &amp; Frontend</span>
+            </div>
+            <div class="project__meta-item">
+                <span class="project__meta-key">Year</span>
+                <span class="project__meta-value">2025</span>
+            </div>
+            <div class="project__meta-item">
+                <span class="project__meta-key">Client</span>
+                <span class="project__meta-value">Recongroup AG</span>
+            </div>
+        </div>
+
+        <div class="project__body">
+            <p>
+                The brief was to make a dense services company feel approachable without
+                losing its authority. We leaned on a strict baseline grid, a single accent
+                color and generous whitespace to let the content breathe.
+            </p>
+            <p>
+                The frontend is a no-build static site — the same philosophy as this
+                portfolio — so the team can edit copy directly without a toolchain.
+            </p>
+        </div>
+    </div>
+
+    <script type="module" src="../../src/subpage.js"></script>
+</body>
+
+</html>

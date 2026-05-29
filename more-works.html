@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>More works — Sanmu Portfolio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=DM+Serif+Display:ital@0;1&family=DM+Serif+Text:ital@0;1&display=swap">
+    <!-- 本页与 index.html 同级，所以样式路径仍是 ./src/style.css -->
+    <link rel="stylesheet" href="./src/style.css">
+</head>
+
+<body>
+    <!-- 自定义鼠标指针：与首页同一个 DOM 契约（CSS 已全局隐藏系统光标） -->
+    <div class="mousePointer"></div>
+
+    <!-- old-school 装饰图层（默认 modern 主题下不显形，主题跟随首页 localStorage） -->
+    <div class="theme-paper" aria-hidden="true"></div>
+
+    <div class="container">
+        <!-- 返回导航：./index.html 是相对路径写法；
+             也可写成 "/" 或 "/index.html"（绝对路径，从站点根解析）。 -->
+        <nav class="subpage-nav">
+            <a class="subpage-nav__back" href="./index.html" data-bigdot="true">
+                <span aria-hidden="true">←</span> Back to home
+            </a>
+            <span class="subpage-nav__crumb">/ More works</span>
+        </nav>
+
+        <p class="project__label">Archive</p>
+        <h1 class="project__title">More works</h1>
+        <p class="project__intro">
+            A wider selection of projects across branding, web and editorial design.
+        </p>
+
+        <!-- 卡片网格：每张卡片用 <a> 跳到对应作品详情页。
+             这里统一用"相对路径 + 文件夹"写法（./works/<slug>/），
+             浏览器会自动解析为该目录下的 index.html。 -->
+        <div class="gallery">
+            <a class="gallery__card" href="./works/recongroup/" data-bigdot="true">
+                <span class="gallery__thumb"><img src="https://picsum.photos/id/1015/600/400" alt="Recongroup"></span>
+                <span class="gallery__name">Recongroup</span>
+            </a>
+            <a class="gallery__card" href="./works/glassland/" data-bigdot="true">
+                <span class="gallery__thumb"><img src="https://picsum.photos/id/1018/600/400" alt="Glassland"></span>
+                <span class="gallery__name">Glassland</span>
+            </a>
+            <a class="gallery__card" href="./works/pefc/" data-bigdot="true">
+                <span class="gallery__thumb"><img src="https://picsum.photos/id/1043/600/400" alt="PEFC"></span>
+                <span class="gallery__name">PEFC</span>
+            </a>
+            <a class="gallery__card" href="./works/biosphere-lab-lungau/" data-bigdot="true">
+                <span class="gallery__thumb"><img src="https://picsum.photos/id/1069/600/400" alt="Biosphere Lab Lungau"></span>
+                <span class="gallery__name">Biosphere Lab Lungau</span>
+            </a>
+            <a class="gallery__card" href="./works/ziid/" data-bigdot="true">
+                <span class="gallery__thumb"><img src="https://picsum.photos/id/1074/600/400" alt="ZIID"></span>
+                <span class="gallery__name">ZIID</span>
+            </a>
+            <a class="gallery__card" href="./works/hotel-gambswirt/" data-bigdot="true">
+                <span class="gallery__thumb"><img src="https://picsum.photos/id/110/600/400" alt="Hotel Gambswirt"></span>
+                <span class="gallery__name">Hotel Gambswirt</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- jQuery 不是必须的：子页面只用原生 JS。轻量、加载快。 -->
+    <script type="module" src="./src/subpage.js"></script>
+</body>
+
+</html>

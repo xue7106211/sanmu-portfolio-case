@@ -548,6 +548,20 @@ html, body {
     --hover-x: 16px;
 }
 
+/* 作品名链接 <a class="works__link">
+   关键：原来文字直接写在 <li> 里，现在包了一层 <a> 做跳转。
+   - color: inherit + text-decoration: none → 去掉 a 默认的蓝色下划线，
+     让它继续沿用 .works__item 的大字号黑字视觉；
+   - cursor: none → 交给自定义指针，保持与全站一致；
+   - 字号/字重等排版属性本就会从 .works__item 继承，这里无需重复声明。 */
+.works__link {
+    color: inherit;
+    text-decoration: none;
+    cursor: none;
+    /* 让链接命中区域与文字一致，不向右撑满整行 */
+    display: inline;
+}
+
 /* 箭头图标 → 用 ::after 生成，默认隐藏（透明 + 缩小 + 左移），hover 时淡入 + 复位 */
 .works__item::after {
     /* 用 Unicode 箭头，无需额外字体或图片 */
@@ -1192,3 +1206,186 @@ body.theme-old .badge {
 /* mix-blend-mode: difference 已经在 modern 主题下表现良好；
    这里只确保在 old-school 主题下背景色读最新的 accent，让色彩反转一致。
    .big 原有的半透明白色背景会在两个主题下都产生反色，无需大改。 */
+
+
+/* ============================================================================ */
+/* 子页面（subpage）：作品详情 / More works                                     */
+/* ============================================================================ */
+/*
+   说明：
+   - 这些类只在子页面（works/<slug>/index.html、more-works.html）用到，
+     首页不会引用，但写在同一张全局表里方便共享主题变量与基础观感。
+   - 子页面复用了 .container 的留白与（old-school 下的）双线边框，
+     所以这里只补"返回导航 + 详情排版"这部分增量样式。
+*/
+
+/* ---- 顶部返回导航：← Back to home ---- */
+.subpage-nav {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    margin-bottom: 64px;
+    font-size: 14px;
+}
+
+/* 返回链接：去掉默认下划线，hover 用主题强调色，与首页链接节奏一致 */
+.subpage-nav__back {
+    color: var(--fg);
+    text-decoration: none;
+    cursor: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: color 0.25s ease, transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.subpage-nav__back:hover {
+    color: var(--accent);
+    /* hover 时箭头方向（←）轻微左移，呼应首页 CTA 的"出发感" */
+    transform: translateX(-6px);
+}
+
+.subpage-nav__crumb {
+    color: var(--fg-muted);
+    letter-spacing: 0.04em;
+}
+
+/* ---- 作品详情：标题区 ---- */
+.project__label {
+    margin: 0 0 16px 0;
+    font-size: 14px;
+    color: var(--fg-muted);
+    letter-spacing: 0.04em;
+}
+
+.project__title {
+    margin: 0 0 24px 0;
+    font-size: clamp(48px, 9vw, 140px);
+    font-weight: 300;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    text-transform: uppercase;
+}
+
+.project__intro {
+    max-width: 720px;
+    margin: 0 0 56px 0;
+    font-size: clamp(18px, 2.2vw, 28px);
+    font-weight: 400;
+    line-height: 1.45;
+    color: var(--fg);
+}
+
+/* 详情主图：复用 .portrait 的裁切策略，但宽度撑满主内容区 */
+.project__cover {
+    width: 100%;
+    height: clamp(280px, 50vw, 600px);
+    overflow: hidden;
+    background: var(--fg-muted);
+    margin-bottom: 56px;
+}
+
+.project__cover > img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+body.theme-old .project__cover > img {
+    /* 与首页人像一致的旧报纸单色滤镜 */
+    filter: grayscale(0.6) sepia(0.4) contrast(0.95);
+}
+
+/* 元信息表：Role / Year / Client 等键值对 */
+.project__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 48px;
+    margin-bottom: 64px;
+    padding-bottom: 32px;
+    border-bottom: 1px solid var(--border-strong);
+}
+
+.project__meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.project__meta-key {
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+}
+
+.project__meta-value {
+    font-size: 16px;
+    color: var(--fg);
+}
+
+/* 正文段落 */
+.project__body {
+    max-width: 720px;
+}
+
+.project__body p {
+    margin: 0 0 20px 0;
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--fg);
+}
+
+/* ---- More works：卡片网格 ---- */
+.gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 32px;
+    margin-top: 8px;
+}
+
+/* 单张卡片整体是个链接 */
+.gallery__card {
+    color: inherit;
+    text-decoration: none;
+    cursor: none;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.gallery__thumb {
+    width: 100%;
+    height: 200px;
+    overflow: hidden;
+    background: var(--fg-muted);
+}
+
+.gallery__thumb > img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* hover 时图片轻微放大，整张卡片标题切到强调色 */
+.gallery__card:hover .gallery__thumb > img {
+    transform: scale(1.05);
+}
+
+.gallery__card:hover .gallery__name {
+    color: var(--accent);
+}
+
+.gallery__name {
+    font-size: 22px;
+    font-weight: 400;
+    color: var(--fg);
+    transition: color 0.25s ease;
+}
+
+body.theme-old .gallery__thumb > img {
+    filter: grayscale(0.6) sepia(0.4) contrast(0.95);
+}

@@ -142,19 +142,38 @@
              ================================================================= -->
         <section class="works">
             <p class="works__label">Selected works</p>
-            <!-- 每个 li 通过 data-thumb 携带缩略图 URL；JS 在 hover 时把它换到浮动 thumb 容器里 -->
+            <!-- 每个 li 通过 data-thumb 携带缩略图 URL；JS 在 hover 时把它换到浮动 thumb 容器里。
+                 多页面跳转：文字外包一层 <a class="works__link">，点击即跳转。
+                 这里集中演示 4 种链接写法（详见各行注释）：
+                   1) 相对路径 + 文件夹（./works/<slug>/）→ 浏览器/服务器自动取该目录下的 index.html
+                   2) 绝对路径 + 文件夹（/works/pefc/）   → 从"站点根"开始解析，同样自动取 index.html
+                   3) 相对路径 + 同级 HTML 文件（./more-works.html）→ 与 index.html 同级的独立页面
+                 注意：data-thumb / data-bigdot 仍留在 <li> 上，hover 缩略图与指针放大逻辑不受影响。 -->
             <ol class="works__list">
-                <li class="works__item" data-bigdot="true" data-thumb="https://picsum.photos/id/1015/600/400">Recongroup
+                <!-- ① 相对路径 + 文件夹：./works/recongroup/ 解析为 works/recongroup/index.html -->
+                <li class="works__item" data-bigdot="true" data-thumb="https://picsum.photos/id/1015/600/400">
+                    <a class="works__link" href="./works/recongroup/">Recongroup</a>
                 </li>
-                <li class="works__item" data-bigdot="true" data-thumb="https://picsum.photos/id/1018/600/400">Glassland
+                <li class="works__item" data-bigdot="true" data-thumb="https://picsum.photos/id/1018/600/400">
+                    <a class="works__link" href="./works/glassland/">Glassland</a>
                 </li>
-                <li class="works__item" data-bigdot="true" data-thumb="https://picsum.photos/id/1043/600/400">PEFC</li>
-                <li class="works__item" data-bigdot="true" data-thumb="https://picsum.photos/id/1069/600/400">Biosphere
-                    Lab Lungau</li>
-                <li class="works__item" data-bigdot="true" data-thumb="https://picsum.photos/id/1074/600/400">ZIID</li>
-                <li class="works__item" data-bigdot="true" data-thumb="https://picsum.photos/id/110/600/400">Hotel
-                    Gambswirt</li>
-                <li class="works__item" data-bigdot="true" data-thumb="https://picsum.photos/id/119/600/400">More works
+                <!-- ② 绝对路径 + 文件夹：/works/pefc/ 从站点根解析（需用静态服务器访问，非 file://）。
+                     与相对写法效果相同，区别只在"从哪里开始算" —— 绝对路径不受当前页面所在层级影响。 -->
+                <li class="works__item" data-bigdot="true" data-thumb="https://picsum.photos/id/1043/600/400">
+                    <a class="works__link" href="/works/pefc/">PEFC</a>
+                </li>
+                <li class="works__item" data-bigdot="true" data-thumb="https://picsum.photos/id/1069/600/400">
+                    <a class="works__link" href="./works/biosphere-lab-lungau/">Biosphere Lab Lungau</a>
+                </li>
+                <li class="works__item" data-bigdot="true" data-thumb="https://picsum.photos/id/1074/600/400">
+                    <a class="works__link" href="./works/ziid/">ZIID</a>
+                </li>
+                <li class="works__item" data-bigdot="true" data-thumb="https://picsum.photos/id/110/600/400">
+                    <a class="works__link" href="./works/hotel-gambswirt/">Hotel Gambswirt</a>
+                </li>
+                <!-- ③ 相对路径 + 同级 HTML 文件：./more-works.html 与本页 index.html 同级 -->
+                <li class="works__item" data-bigdot="true" data-thumb="https://picsum.photos/id/119/600/400">
+                    <a class="works__link" href="./more-works.html">More works</a>
                 </li>
             </ol>
 
