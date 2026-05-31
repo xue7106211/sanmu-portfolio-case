@@ -36,6 +36,11 @@
     --on-strong-bg: #111;
     --on-strong-fg: #fff;
 
+    /* ---- 文本选中（::selection） ----
+       用主色当高亮底，配深色文字保证可读性 */
+    --selection-bg: var(--accent);
+    --selection-fg: #111;
+
     /* ---- 字体 ---- */
     --font-body: "Helvetica Neue", Inter, sans-serif;
     --font-display: var(--font-body);
@@ -65,6 +70,10 @@ body.theme-old {
     --on-strong-bg: #2b1d12;
     --on-strong-fg: #f4ead5;
 
+    /* 复古红底配米白文字，呼应纸张质感 */
+    --selection-bg: var(--accent);
+    --selection-fg: #f4ead5;
+
     --font-body: "DM Serif Text", "Times New Roman", Georgia, serif;
     --font-display: "DM Serif Display", "Times New Roman", Georgia, serif;
 
@@ -90,6 +99,27 @@ body.theme-transitioning *:not(.mousePointer):not(.preloader):not(.preloader *) 
         fill var(--theme-duration) var(--theme-ease),
         stroke var(--theme-duration) var(--theme-ease),
         opacity var(--theme-duration) var(--theme-ease);
+}
+
+
+/* -------------------------------------------------------------------------- */
+/* 文本选中样式（::selection）                                                  */
+/* -------------------------------------------------------------------------- */
+/*
+   - 通过 ::selection 伪元素自定义用户选中文本时的底色与字色；
+   - 颜色读主题变量，切换主题时选中色会跟着一起变；
+   - ::selection 只支持有限属性（color / background-color / text-shadow 等），
+     这里只设这两项即可；
+   - 同时写 ::-moz-selection 兼容 Firefox（两者不能合并到一条选择器里，
+     否则任一不识别会让整条规则失效）。 */
+::selection {
+    background-color: var(--selection-bg);
+    color: var(--selection-fg);
+    cursor:text;
+}
+::-moz-selection {
+    background-color: var(--selection-bg);
+    color: var(--selection-fg);
 }
 
 
@@ -1422,21 +1452,31 @@ body.theme-old .gallery__thumb > img {
    - body 改为 height:auto + min-height:100%，让 pin-spacer 能正常撑高文档。
 
    再一个易踩的坑：CSS 规范规定，当 overflow-x / overflow-y 一个是 visible、
-   另一个是非 visible（如 hidden）时，visible 会被"计算成 auto"。
+   另一个是"滚动值"（scroll / auto / hidden）时，visible 会被"计算成 auto"。
    若这里写 overflow-x:hidden + overflow-y:visible，overflow-y 会被算成 auto，
-   body 又变回滚动容器，修复失效。所以两个轴都必须设 visible。
-   横向溢出无需在 body 层裁剪 —— .h-scroll 自身的 overflow:hidden 已经裁掉了。
+   body 又变回滚动容器，修复失效。
+
+   隐藏原生横向滚动条的正确姿势：用 overflow-x: clip（而不是 hidden）。
+   - clip 不属于"滚动值"，与 visible 搭配时【不会】被换算成 auto，
+     因此既裁掉了横向溢出（Chrome 底部的原生横向滚动条随之消失），
+     又不会把 html/body 变成滚动容器 → window 纵向滚动与 pin/scrub 照常工作；
+   - clip 也不会为 fixed 元素创建新的包含块，Header / Footer / 被 pin 的 .h-scroll
+     仍相对视口定位，不受裁剪影响。
+   纵向保持 visible，交给 window 文档流滚动，ScrollTrigger 才读得到 window.scrollY。
 */
 html:has(body.mw-body) {
     height: auto;
-    overflow: visible;
+    /* 横向 clip 裁掉溢出、隐藏原生横向滚动条；纵向 visible 交给 window 滚动 */
+    overflow-x: clip;
+    overflow-y: visible;
 }
 
 .mw-body {
     height: auto;
     min-height: 100%;
-    /* 两个轴都 visible：纵向交给 window 文档流滚动，横向由 .h-scroll 自行裁剪 */
-    overflow: visible;
+    /* 同上：横向 clip 隐藏原生横向滚动条，纵向 visible 交给 window 文档流滚动 */
+    overflow-x: clip;
+    overflow-y: visible;
 }
 
 /* ---------- 固定 Header ---------- */
